@@ -42,7 +42,7 @@ bun install
 bun run dev
 ```
 
-Open http://localhost:8081.
+Open http://localhost:8080.
 
 ### Email Setup (Optional)
 

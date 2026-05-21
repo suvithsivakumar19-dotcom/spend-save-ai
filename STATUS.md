@@ -29,7 +29,7 @@ Credex AI Spend Auditor is a **complete, production-ready SaaS application** tha
 ## 🚀 Quick Start
 
 ```bash
-# Start app (runs on http://localhost:8081)
+# Start app (runs on http://localhost:8080)
 npm run dev
 
 # Run tests
@@ -197,10 +197,10 @@ dist/
 
 ## 🌐 Live Demo
 
-**URL:** http://localhost:8081 (when running `npm run dev`)
+**URL:** http://localhost:8080 (when running `npm run dev`)
 
 ### Test Flow (2 minutes)
-1. Open http://localhost:8081
+1. Open http://localhost:8080
 2. Click "Audit My AI Spend"
 3. See form with default ChatGPT tool
 4. Click "Run audit"

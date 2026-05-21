@@ -14,12 +14,12 @@ npm install
 
 # Start development server
 npm run dev
-# Server runs at http://localhost:8081
+# Server runs at http://localhost:8080
 ```
 
 ### 2. Test the App
 
-1. Open http://localhost:8081
+1. Open http://localhost:8080
 2. Click "Audit My AI Spend"
 3. Fill in a tool and spend (defaults are fine)
 4. Click "Run audit"
