@@ -38,8 +38,8 @@ export const sendAuditEmail = createServerFn({ method: "POST" })
         return { success: false, message: "Email address is required." };
       }
 
-      const fromAddress = process.env.RESEND_FROM_EMAIL || "report@resend.dev";
-      const replyTo = process.env.RESEND_REPLY_TO || "support@resend.dev";
+      const fromAddress = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+      const replyTo = process.env.RESEND_REPLY_TO || "onboarding@resend.dev";
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
