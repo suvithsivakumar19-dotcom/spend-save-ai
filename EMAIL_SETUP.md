@@ -49,6 +49,7 @@ from: "report@credex.app",
 ### Local Testing Without Email
 
 1. Run the app:
+
    ```bash
    npm run dev
    ```
@@ -109,12 +110,12 @@ wrangler secret put RESEND_API_KEY
 
 ### Common Issues
 
-| Issue | Fix |
-|---|---|
-| "Email service not configured" | Add `RESEND_API_KEY` to `.env.local` |
-| "Email sending failed" | Check Resend dashboard for error details |
-| "Invalid sender domain" | Verify domain in Resend dashboard |
-| Emails in spam | Check SPF/DKIM records in DNS |
+| Issue                          | Fix                                      |
+| ------------------------------ | ---------------------------------------- |
+| "Email service not configured" | Add `RESEND_API_KEY` to `.env.local`     |
+| "Email sending failed"         | Check Resend dashboard for error details |
+| "Invalid sender domain"        | Verify domain in Resend dashboard        |
+| Emails in spam                 | Check SPF/DKIM records in DNS            |
 
 ## Cost
 
@@ -138,10 +139,11 @@ Use this in your browser console:
 
 ```javascript
 // Check if email was saved to localStorage
-JSON.parse(localStorage.getItem('credex.leads') || '[]')
+JSON.parse(localStorage.getItem("credex.leads") || "[]");
 ```
 
 Example output:
+
 ```javascript
 [
   {
@@ -149,9 +151,9 @@ Example output:
     company: "Acme Corp",
     role: "CTO",
     at: "2026-05-21T06:15:22.000Z",
-    emailId: "e_xxxxx" // Resend email ID if sent
-  }
-]
+    emailId: "e_xxxxx", // Resend email ID if sent
+  },
+];
 ```
 
 ## Questions?

@@ -17,7 +17,9 @@ CloudZero) — different motion entirely.
 ## Acquisition channels (ranked by current bet)
 
 ### 1. Reddit — highest signal
+
 Communities where the ICP already complains:
+
 - `r/SaaS` — pricing posts get 100+ upvotes weekly
 - `r/startups` — "what we cut" threads
 - `r/ChatGPTCoding` and `r/cursor` — direct tool overlap discussions
@@ -28,7 +30,9 @@ Communities where the ICP already complains:
 should be Plus"). Link in profile, not in comments.
 
 ### 2. X / Twitter
+
 Specific people who post about AI costs publicly:
+
 - Founders sharing burn breakdowns
 - VCs publishing "cost of intelligence" essays
 - Engineers tweeting plan upgrade screenshots
@@ -37,14 +41,17 @@ Specific people who post about AI costs publicly:
 Embed metadata makes the link itself a screenshot-worthy hook.
 
 ### 3. Hacker News
+
 One shot, has to work. Title: "Show HN: We found $4M of overpaid AI
 subscriptions across 200 startups". Need ~200 real audits first to back it.
 
 ### 4. Direct outreach to 50 YC W25 + S25 founders
+
 "Took 60 seconds to audit your likely AI stack. Here's the report link.
 No reply needed unless you want the full review."
 
 ### 5. Indie Hackers + Product Hunt
+
 Lower priority — audience is overlapping with Reddit but smaller signal.
 
 ## First 100 users plan

@@ -10,14 +10,14 @@ designed to maximize.
 
 ## Supporting metrics
 
-| Metric | What it tells us | Target by week 8 |
-|---|---|---:|
-| Audit completion rate | UX quality | ≥ 65% |
-| Median monthly savings surfaced | Engine quality | ≥ $400/mo |
-| Shares per audit (URL copies + outbound clicks) | Viral coefficient | ≥ 0.15 |
-| Email capture rate | Lead funnel | ≥ 20% |
-| Time to first savings number (TTFV) | Speed of value | < 90s |
-| Day-7 return rate | Stickiness | ≥ 12% |
+| Metric                                          | What it tells us  | Target by week 8 |
+| ----------------------------------------------- | ----------------- | ---------------: |
+| Audit completion rate                           | UX quality        |            ≥ 65% |
+| Median monthly savings surfaced                 | Engine quality    |        ≥ $400/mo |
+| Shares per audit (URL copies + outbound clicks) | Viral coefficient |           ≥ 0.15 |
+| Email capture rate                              | Lead funnel       |            ≥ 20% |
+| Time to first savings number (TTFV)             | Speed of value    |            < 90s |
+| Day-7 return rate                               | Stickiness        |            ≥ 12% |
 
 ## Instrumentation strategy
 

@@ -31,6 +31,7 @@ vercel
 ```
 
 **Set environment variables in Vercel dashboard:**
+
 - `RESEND_API_KEY` (optional, for email)
 - `APP_URL` (optional, for audit links)
 
@@ -61,17 +62,18 @@ NODE_ENV=production node dist/server/index.js
 ### 3. Custom Domain
 
 Configure DNS:
+
 - **Vercel**: Add CNAME in Vercel dashboard
 - **Cloudflare**: Update nameservers
 - **Self-hosted**: Point A record to your server
 
 ## Environment Variables
 
-| Variable | Required | Description | Example |
-|---|---|---|---|
-| `RESEND_API_KEY` | Optional | Email API key | `re_xxxxx` |
-| `APP_URL` | Optional | App base URL for audit links | `https://credex.app` |
-| `NODE_ENV` | Automatic | Environment (dev/production) | `production` |
+| Variable         | Required  | Description                  | Example              |
+| ---------------- | --------- | ---------------------------- | -------------------- |
+| `RESEND_API_KEY` | Optional  | Email API key                | `re_xxxxx`           |
+| `APP_URL`        | Optional  | App base URL for audit links | `https://credex.app` |
+| `NODE_ENV`       | Automatic | Environment (dev/production) | `production`         |
 
 ## Post-Deployment
 
@@ -91,12 +93,12 @@ Configure DNS:
 
 ## Troubleshooting
 
-| Issue | Cause | Fix |
-|---|---|---|
-| Build fails | Missing dependencies | Run `npm install` |
-| Results page shows error | Audit engine issue | Check browser console, create issue |
-| Email not sent | No API key set | Add `RESEND_API_KEY` env var |
-| 404 on `/audit/$id` | Route not registered | Rebuild and redeploy |
+| Issue                    | Cause                | Fix                                 |
+| ------------------------ | -------------------- | ----------------------------------- |
+| Build fails              | Missing dependencies | Run `npm install`                   |
+| Results page shows error | Audit engine issue   | Check browser console, create issue |
+| Email not sent           | No API key set       | Add `RESEND_API_KEY` env var        |
+| 404 on `/audit/$id`      | Route not registered | Rebuild and redeploy                |
 
 ## Performance Notes
 
@@ -115,6 +117,7 @@ This app is highly scalable because:
 4. **Fast audit engine** — O(n) where n ≤ 8 tools typically
 
 To scale:
+
 - Add Supabase for lead persistence (see `ARCHITECTURE.md`)
 - Add Slack/email digest via serverless cron jobs
 - Cache frequently viewed reports via CDN
@@ -122,11 +125,13 @@ To scale:
 ## Rollback
 
 **Vercel:**
+
 ```bash
 vercel rollback
 ```
 
 **Cloudflare:**
+
 ```bash
 # Redeploy previous build
 wrangler deploy --env production

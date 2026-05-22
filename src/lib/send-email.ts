@@ -3,7 +3,8 @@ import { createServerFn } from "@tanstack/react-start";
 export interface SendEmailInput {
   email: string;
   company: string;
-  role: string;
+  role?: string;
+  teamSize?: string | number;
   auditUrl: string;
   monthlySavings: number;
   yearlySavings: number;
@@ -26,9 +27,7 @@ export const sendAuditEmail = createServerFn({ method: "POST" })
 
     // Graceful fallback if no API key — still succeed but log warning
     if (!resendApiKey) {
-      console.warn(
-        "⚠️  RESEND_API_KEY not set. Email sending is disabled. Set env var to enable.",
-      );
+      console.warn("⚠️  RESEND_API_KEY not set. Email sending is disabled. Set env var to enable.");
       return { success: true, message: "Email service not configured (dev mode)", skipped: true };
     }
 
@@ -74,13 +73,17 @@ export const sendAuditEmail = createServerFn({ method: "POST" })
         message: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
       };
     }
-  },
-);
+  });
 
 function generateEmailHTML(input: SendEmailInput): string {
-  const { email, company, role, auditUrl, monthlySavings, yearlySavings, summary } = input;
+  const { email, company, role, teamSize, auditUrl, monthlySavings, yearlySavings, summary } =
+    input;
   const monthly = Number(monthlySavings) || 0;
   const yearly = Number(yearlySavings) || 0;
+
+  const displayTeamSize =
+    teamSize ||
+    (role && role.startsWith("Team Size:") ? role.replace("Team Size:", "").trim() : "");
 
   return `
 <!DOCTYPE html>
@@ -90,7 +93,7 @@ function generateEmailHTML(input: SendEmailInput): string {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.5; color: #1a1a1a; }
-      a { color: #2563eb; text-decoration: none; }
+      a { color: #8b5cf6; text-decoration: none; }
       a:hover { text-decoration: underline; }
       .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #fafafa; }
       .header { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }
@@ -99,7 +102,7 @@ function generateEmailHTML(input: SendEmailInput): string {
       .stat-box { background: #f0f9ff; padding: 15px; border-radius: 6px; text-align: center; }
       .stat-value { font-size: 24px; font-weight: bold; color: #059669; }
       .stat-label { font-size: 12px; color: #666; text-transform: uppercase; margin-top: 5px; }
-      .cta-button { display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 6px; margin: 20px 0; font-weight: 600; }
+      .cta-button { display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 6px; margin: 20px 0; font-weight: 600; text-decoration: none !important; }
       .footer { background: #fafafa; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
     </style>
   </head>
@@ -111,20 +114,20 @@ function generateEmailHTML(input: SendEmailInput): string {
       </div>
       
       <div class="content">
-        <p>Hi${role ? ` ${role}` : ""},</p>
+        <p>Hi there,</p>
         
         <p>Your audit is complete. We found <strong>${yearly > 0 ? `${formatCurrency(yearly)}/year` : "optimization"}</strong> in potential savings across your AI stack.</p>
         
-        ${summary ? `<p style="margin-top: 1.2rem;">${summary}</p>` : ""}
+        ${summary ? `<p style="margin-top: 1.2rem; font-style: italic; color: #374151; padding-left: 10px; border-left: 3px solid #8b5cf6;">"${summary}"</p>` : ""}
 
         <div class="stats">
           <div class="stat-box">
             <div class="stat-value">${formatCurrency(monthly)}</div>
-            <div class="stat-label">Monthly</div>
+            <div class="stat-label">Monthly Savings</div>
           </div>
           <div class="stat-box">
             <div class="stat-value">${formatCurrency(yearly)}</div>
-            <div class="stat-label">Yearly</div>
+            <div class="stat-label">Yearly Savings</div>
           </div>
         </div>
         
@@ -141,7 +144,10 @@ function generateEmailHTML(input: SendEmailInput): string {
           3. Re-audit any time you add a tool or change plans
         </p>
         
-        ${company ? `<p><strong>Company:</strong> ${company}</p>` : ""}
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #e5e7eb; font-size: 13px;">
+          ${company ? `<p style="margin: 4px 0;"><strong>Company:</strong> ${company}</p>` : ""}
+          ${displayTeamSize ? `<p style="margin: 4px 0;"><strong>Team Size:</strong> ${displayTeamSize}</p>` : ""}
+        </div>
         
         <p style="margin-top: 30px; font-size: 13px; color: #888;">
           Questions? Reply to this email or visit credex.app/faq

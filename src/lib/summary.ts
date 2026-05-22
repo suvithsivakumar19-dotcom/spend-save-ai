@@ -16,7 +16,7 @@ export interface GenerateSummaryInput {
 
 export interface GenerateSummaryResult {
   summary: string;
-  provider: "openai" | "fallback";
+  provider: "openai" | "anthropic" | "fallback";
   message?: string;
 }
 
@@ -25,79 +25,116 @@ export const generateAuditSummary = createServerFn({ method: "POST" })
   .handler(async (ctx): Promise<GenerateSummaryResult> => {
     const input = ctx.data;
     const fallbackSummary = generateSummary(input);
-    const openAiKey = process.env.OPENAI_API_KEY;
 
-    if (!openAiKey) {
-      return {
-        summary: fallbackSummary,
-        provider: "fallback",
-        message: "No OpenAI API key configured. Using deterministic summary.",
-      };
+    const anthropicKey = process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY;
+    const openAiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+
+    // Build the query prompt
+    const prompt = buildPrompt(input);
+    const systemInstruction =
+      "You are an expert enterprise SaaS analyst writing for executives. Create an insightful, business-ready summary of AI spend and savings. Start with a strong insight sentence, keep the tone concise, and end with a clear recommendation. Do not repeat the recommendation bullets verbatim.";
+
+    // 1. Try Anthropic Claude API first if key exists
+    if (anthropicKey) {
+      try {
+        console.log("[summary] Attempting summary generation via Anthropic...");
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": anthropicKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 340,
+            temperature: 0.8,
+            system: systemInstruction,
+            messages: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+          }),
+        });
+
+        if (response.ok) {
+          const payload = await response.json();
+          const summary = payload?.content?.[0]?.text?.trim();
+          if (summary) {
+            console.log("[summary] Dynamic Anthropic Claude summary generated successfully!");
+            return { summary, provider: "anthropic" };
+          }
+        } else {
+          const errorText = await response.text();
+          console.warn("[summary] Anthropic API failed:", response.status, errorText);
+        }
+      } catch (err) {
+        console.warn("[summary] Anthropic summary fetch error:", err);
+      }
     }
 
-    try {
-      const prompt = buildPrompt(input);
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openAiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are an expert enterprise SaaS analyst writing for executives. Create an insightful, business-ready summary of AI spend and savings. Start with a strong insight sentence, keep the tone concise, and end with a clear recommendation. Do not repeat the recommendation bullets verbatim.",
-            },
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          temperature: 0.9,
-          max_tokens: 340,
-        }),
-      });
+    // 2. Try OpenAI GPT API next if key exists
+    if (openAiKey) {
+      try {
+        console.log("[summary] Attempting summary generation via OpenAI...");
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openAiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: systemInstruction,
+              },
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            temperature: 0.8,
+            max_tokens: 340,
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.text();
-        console.warn("OpenAI summary error:", response.status, error);
-        return {
-          summary: fallbackSummary,
-          provider: "fallback",
-          message: "OpenAI summary request failed.",
-        };
+        if (response.ok) {
+          const payload = await response.json();
+          const summary = payload?.choices?.[0]?.message?.content?.trim();
+          if (summary) {
+            console.log("[summary] Dynamic OpenAI summary generated successfully!");
+            return { summary, provider: "openai" };
+          }
+        } else {
+          const errorText = await response.text();
+          console.warn("[summary] OpenAI API failed:", response.status, errorText);
+        }
+      } catch (err) {
+        console.warn("[summary] OpenAI summary fetch error:", err);
       }
-
-      const payload = await response.json();
-      const summary = payload?.choices?.[0]?.message?.content?.trim();
-      if (!summary) {
-        return {
-          summary: fallbackSummary,
-          provider: "fallback",
-          message: "OpenAI returned no summary.",
-        };
-      }
-
-      return { summary, provider: "openai" };
-    } catch (error) {
-      console.warn("OpenAI summary error:", error);
-      return {
-        summary: fallbackSummary,
-        provider: "fallback",
-        message: "OpenAI summary failed.",
-      };
     }
-  }
-);
+
+    // 3. Graceful fallback
+    console.log("[summary] Using deterministic rules-based summary fallback.");
+    return {
+      summary: fallbackSummary,
+      provider: "fallback",
+      message: "API keys missing or requests failed. Using rules-based executive summary.",
+    };
+  });
 
 function buildPrompt(input: GenerateSummaryInput): string {
   const toolCount = input.input.subscriptions.length;
   const topRecommendations = input.recommendations
     .slice(0, 3)
-    .map((rec, index) => `${index + 1}. ${rec.toolName}: ${formatNumber(rec.monthlySavings)} /mo savings`)
+    .map(
+      (rec, index) =>
+        `${index + 1}. ${rec.toolName}: ${formatNumber(rec.monthlySavings)} /mo savings (${rec.action})`,
+    )
     .join("\n");
 
   return `

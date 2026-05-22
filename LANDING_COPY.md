@@ -27,6 +27,7 @@ surprise upgrades. The average team we audit has 3–5 redundant subscriptions
 and is on a higher tier than they actually use.
 
 **Stat tiles:**
+
 - 30% average spend reduction
 - 4.2 AI tools per team
 - $612 median monthly savings

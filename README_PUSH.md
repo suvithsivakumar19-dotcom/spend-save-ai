@@ -1,10 +1,12 @@
 Push this project to GitHub automatically
 
 Prerequisites
+
 - PowerShell (Windows) or pwsh
 - A GitHub Personal Access Token with `repo` scope set in the environment variable `GITHUB_TOKEN`.
 
 Usage
+
 1. Open PowerShell in the project root.
 2. Set your token (example):
    ```powershell

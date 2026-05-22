@@ -2,23 +2,23 @@
 
 ## Pricing model (proposed)
 
-| Tier | Price | What you get |
-|---|---|---|
-| Self-serve audit | $0 | The free tool. Forever. |
-| Done-for-you review | $499 one-time | We audit, we call your vendors, we send a savings memo. |
-| Quarterly FinOps | $299/mo | Same as above, every quarter, plus alerts on plan changes. |
+| Tier                | Price         | What you get                                               |
+| ------------------- | ------------- | ---------------------------------------------------------- |
+| Self-serve audit    | $0            | The free tool. Forever.                                    |
+| Done-for-you review | $499 one-time | We audit, we call your vendors, we send a savings memo.    |
+| Quarterly FinOps    | $299/mo       | Same as above, every quarter, plus alerts on plan changes. |
 
 The free tier is the wedge. The two paid tiers monetize the 10% of teams
 whose savings are large enough that paying us is obvious math.
 
 ## Funnel assumptions
 
-| Stage | Rate | Reasoning |
-|---|---:|---|
-| Landing → audit started | 35% | Strong CTA, no friction, value visible above the fold. |
-| Audit started → completed | 70% | Single-page form, persists state. |
-| Completed → email submitted | 25% | Email gate is after value, optional. |
-| Email → paid (DFY) conversion | 3% | Only teams with >$500/mo savings will book the review. |
+| Stage                         | Rate | Reasoning                                              |
+| ----------------------------- | ---: | ------------------------------------------------------ |
+| Landing → audit started       |  35% | Strong CTA, no friction, value visible above the fold. |
+| Audit started → completed     |  70% | Single-page form, persists state.                      |
+| Completed → email submitted   |  25% | Email gate is after value, optional.                   |
+| Email → paid (DFY) conversion |   3% | Only teams with >$500/mo savings will book the review. |
 
 100 visits → 35 audits → ~25 finished → ~6 emails → ~0.2 paying customers.
 
@@ -41,13 +41,13 @@ whose savings are large enough that paying us is obvious math.
 
 ## Path to $1M ARR
 
-| Lever | Number needed |
-|---|---:|
-| Recurring customers @ $299/mo | ~280 |
-| DFY one-time @ $499 (annualized over 12mo) | n/a — treated as one-time |
-| Implied audits/yr to fill the funnel (1% conv) | 28,000 |
-| Implied free audits/mo | ~2,300 |
-| Implied landing visits/mo (35% start, 70% complete) | ~9,400 |
+| Lever                                               |             Number needed |
+| --------------------------------------------------- | ------------------------: |
+| Recurring customers @ $299/mo                       |                      ~280 |
+| DFY one-time @ $499 (annualized over 12mo)          | n/a — treated as one-time |
+| Implied audits/yr to fill the funnel (1% conv)      |                    28,000 |
+| Implied free audits/mo                              |                    ~2,300 |
+| Implied landing visits/mo (35% start, 70% complete) |                    ~9,400 |
 
 9,400 monthly visits is **one good Reddit thread per week + steady X
 presence + ongoing HN attempts**. Not crazy. Not free either.

@@ -13,9 +13,15 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
-          <a href="/#how" className="hover:text-foreground transition-colors">How it works</a>
-          <a href="/#features" className="hover:text-foreground transition-colors">Features</a>
-          <a href="/#faq" className="hover:text-foreground transition-colors">FAQ</a>
+          <a href="/#how" className="hover:text-foreground transition-colors">
+            How it works
+          </a>
+          <a href="/#features" className="hover:text-foreground transition-colors">
+            Features
+          </a>
+          <a href="/#faq" className="hover:text-foreground transition-colors">
+            FAQ
+          </a>
           <Link
             to="/audit"
             className="inline-flex h-9 items-center rounded-lg bg-savings px-4 text-sm font-medium text-primary-foreground shadow-glow hover:opacity-95"
@@ -42,11 +48,17 @@ export function SiteFooter() {
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-savings">
             <span className="text-[10px] font-bold text-primary-foreground">C</span>
           </div>
-          <span>© {new Date().getFullYear()} Credex. Audit logic is rule-based and verifiable.</span>
+          <span>
+            © {new Date().getFullYear()} Credex. Audit logic is rule-based and verifiable.
+          </span>
         </div>
         <div className="flex gap-5">
-          <a href="/#faq" className="hover:text-foreground">FAQ</a>
-          <a href="/audit" className="hover:text-foreground">Start audit</a>
+          <a href="/#faq" className="hover:text-foreground">
+            FAQ
+          </a>
+          <a href="/audit" className="hover:text-foreground">
+            Start audit
+          </a>
         </div>
       </div>
     </footer>

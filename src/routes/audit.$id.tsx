@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -11,26 +11,39 @@ import {
   Layers,
   RefreshCw,
   Loader2,
+  ExternalLink,
+  Printer,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  PieChart,
+  Pie,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/animated-number";
 import { runAudit } from "@/lib/audit-engine";
-import { decodeAuditInput } from "@/lib/share";
+import { getAudit, saveLead } from "@/lib/db";
 import { TOOL_MAP } from "@/lib/pricing-data";
 import { sendAuditEmail } from "@/lib/send-email";
 import { generateAuditSummary } from "@/lib/summary";
-import type { Recommendation } from "@/lib/types";
+import type { Recommendation, ToolSubscription } from "@/lib/types";
 
 export const Route = createFileRoute("/audit/$id")({
-  loader: ({ params }) => {
-    const input = decodeAuditInput(params.id);
+  loader: async ({ params }) => {
+    const input = await getAudit({ data: params.id });
     if (!input) throw notFound();
     const result = runAudit(input);
     return {
       result,
-      auditUrl: `https://your-domain.com/audit/${params.id}`,
+      auditUrl: `https://credex.app/audit/${params.id}`,
     };
   },
   head: ({ loaderData }) => {
@@ -47,21 +60,19 @@ export const Route = createFileRoute("/audit/$id")({
       meta: [
         { title },
         { name: "description", content: desc },
-        { property: "og:url", content: loaderData?.auditUrl ?? "https://your-domain.com/audit" },
+        { property: "og:url", content: loaderData?.auditUrl ?? "https://credex.app/audit" },
         { property: "og:site_name", content: "Credex" },
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "website" },
-        { property: "og:image", content: "https://your-domain.com/og-image.png" },
+        { property: "og:image", content: "https://credex.app/og-image.png" },
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:site", content: "@Credex" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: desc },
-        { name: "twitter:image", content: "https://your-domain.com/og-image.png" },
+        { name: "twitter:image", content: "https://credex.app/og-image.png" },
       ],
-      links: [
-        { rel: "canonical", href: loaderData?.auditUrl ?? "https://your-domain.com/audit" },
-      ],
+      links: [{ rel: "canonical", href: loaderData?.auditUrl ?? "https://credex.app/audit" }],
     };
   },
   component: ResultsPage,
@@ -88,26 +99,21 @@ export const Route = createFileRoute("/audit/$id")({
 
 function ResultsPage() {
   const { result } = Route.useLoaderData();
+  const { id } = Route.useParams();
   const [summaryText, setSummaryText] = useState(result.summary);
   const [summarySource, setSummarySource] = useState<"ai" | "fallback">("fallback");
   const [summaryLoading, setSummaryLoading] = useState(true);
 
   const sortedRecs = useMemo(
     () => [...result.recommendations].sort((a, b) => b.monthlySavings - a.monthlySavings),
-    [result.recommendations]
+    [result.recommendations],
   );
 
-  useEffect(() => {
-    let isActive = true;
-
-    async function fetchSummary() {
+  const fetchSummary = useCallback(
+    async (isActive = true) => {
+      setSummaryLoading(true);
       try {
-        // Debug: summary generation start
-        // eslint-disable-next-line no-console
-        console.debug("[results] fetchSummary start, provider=OpenAI?", !!process.env.OPENAI_API_KEY);
-
-        // Add a client-side timeout so the UI doesn't hang indefinitely
-        const timeoutMs = 6000;
+        const timeoutMs = 7000;
         const summaryPromise = generateAuditSummary({
           data: {
             input: result.input,
@@ -120,30 +126,43 @@ function ResultsPage() {
 
         const response = await Promise.race([
           summaryPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error("summary_timeout")), timeoutMs)),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("summary_timeout")), timeoutMs),
+          ),
         ]);
 
         if (!isActive) return;
-        // eslint-disable-next-line no-console
-        console.debug("[results] fetchSummary done", { provider: (response as any)?.provider, message: (response as any)?.message });
-        setSummaryText((response as any)?.summary ?? result.summary);
-        setSummarySource((response as any)?.provider === "openai" ? "ai" : "fallback");
+
+        const res = response as { provider?: string; summary?: string } | null;
+        if (res?.provider === "openai" || res?.provider === "anthropic") {
+          setSummaryText(res.summary);
+          setSummarySource("ai");
+        } else {
+          setSummaryText(result.summary);
+          setSummarySource("fallback");
+        }
       } catch (error) {
-        // Handle timeout or other failures by falling back to deterministic summary
-        // eslint-disable-next-line no-console
-        console.warn("AI summary failed or timed out, falling back to deterministic summary.", error);
+        if (!isActive) return;
+        console.warn(
+          "AI summary failed or timed out, falling back to deterministic summary.",
+          error,
+        );
         setSummaryText(result.summary);
         setSummarySource("fallback");
       } finally {
         if (isActive) setSummaryLoading(false);
       }
-    }
+    },
+    [result],
+  );
 
-    fetchSummary();
+  useEffect(() => {
+    let isActive = true;
+    fetchSummary(isActive);
     return () => {
       isActive = false;
     };
-  }, [result]);
+  }, [fetchSummary]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -151,7 +170,7 @@ function ResultsPage() {
     try {
       const existing = JSON.parse(localStorage.getItem("credex.audit.history") || "[]");
       const history = Array.isArray(existing) ? existing : [];
-      if (!history.some((entry: any) => entry.id === result.id)) {
+      if (!history.some((entry: { id: string }) => entry.id === result.id)) {
         history.push({
           id: result.id,
           createdAt: result.createdAt,
@@ -170,7 +189,7 @@ function ResultsPage() {
   const auditUrl = typeof window === "undefined" ? "" : window.location.href;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-slate-50/50">
       <SiteHeader />
       <main className="flex-1">
         <ResultsHero result={result} />
@@ -178,21 +197,22 @@ function ResultsPage() {
         <section className="mx-auto max-w-5xl px-4 sm:px-6">
           <SummaryCard
             text={summaryText}
-            note={summaryLoading ? "Generating AI summary…" : summarySource === "ai" ? "AI-generated executive summary" : "Rule-based fallback summary"}
+            loading={summaryLoading}
+            source={summarySource}
+            onRetry={() => fetchSummary(true)}
           />
           <SpendGraph
             current={result.totalCurrentMonthly}
             proposed={result.totalProposedMonthly}
             savings={result.monthlySavings}
+            subscriptions={result.input.subscriptions}
           />
         </section>
 
         <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
           <div className="mb-6 flex items-end justify-between">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Recommendations
-              </h2>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Recommendations</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Sorted by monthly impact. Each rec ties to published pricing.
               </p>
@@ -214,6 +234,8 @@ function ResultsPage() {
             monthlySavings={result.monthlySavings}
             summary={summaryText}
             auditUrl={auditUrl}
+            auditId={id}
+            initialTeamSize={result.input.teamSize}
           />
         </section>
       </main>
@@ -222,11 +244,7 @@ function ResultsPage() {
   );
 }
 
-function ResultsHero({
-  result,
-}: {
-  result: ReturnType<typeof runAudit>;
-}) {
+function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const url = typeof window !== "undefined" ? window.location.href : "";
@@ -243,10 +261,7 @@ function ResultsHero({
 
   function handleReAudit() {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(
-        "credex.audit.input.v1",
-        JSON.stringify(result.input)
-      );
+      window.localStorage.setItem("credex.audit.input.v1", JSON.stringify(result.input));
     }
     navigate({ to: "/audit" });
   }
@@ -269,7 +284,8 @@ function ResultsHero({
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
           About{" "}
           <span className="font-semibold text-foreground">
-            $<AnimatedNumber value={result.yearlySavings} />/year
+            $<AnimatedNumber value={result.yearlySavings} />
+            /year
           </span>{" "}
           across {result.recommendations.length} change
           {result.recommendations.length === 1 ? "" : "s"} to your AI stack.
@@ -281,13 +297,21 @@ function ResultsHero({
           <StatCard label="Yearly savings" value={result.yearlySavings} tone="success" highlight />
         </div>
 
-        <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-          <Button onClick={copy} variant="outline" size="lg">
-            <Copy className="h-4 w-4" />
+        <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center no-print">
+          <Button
+            onClick={() => window.print()}
+            variant="outline"
+            size="lg"
+            className="border-indigo-200 hover:border-indigo-300 text-indigo-700 bg-white"
+          >
+            <Printer className="h-4 w-4 mr-2" /> Download PDF Report
+          </Button>
+          <Button onClick={copy} variant="outline" size="lg" className="copy-btn">
+            <Copy className="h-4 w-4 mr-2" />
             {copied ? "Copied!" : "Copy share link"}
           </Button>
-          <Button variant="hero" size="lg" onClick={handleReAudit}>
-            <RefreshCw className="h-4 w-4" /> Re-run audit
+          <Button variant="hero" size="lg" onClick={handleReAudit} className="re-run-btn">
+            <RefreshCw className="h-4 w-4 mr-2" /> Re-run audit
           </Button>
         </div>
       </div>
@@ -308,8 +332,10 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border bg-card p-6 shadow-soft ${
-        highlight ? "border-transparent bg-savings text-primary-foreground shadow-glow" : "border-border/60"
+      className={`rounded-2xl border bg-card p-4 sm:p-6 shadow-soft ${
+        highlight
+          ? "border-transparent bg-savings text-primary-foreground shadow-glow"
+          : "border-border/60"
       }`}
     >
       <div
@@ -343,28 +369,79 @@ function StatCard({
   );
 }
 
-function SummaryCard({ text, note }: { text: string; note?: string }) {
+function SummaryCard({
+  text,
+  loading,
+  source,
+  onRetry,
+}: {
+  text: string;
+  loading: boolean;
+  source: "ai" | "fallback";
+  onRetry: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const preview = !expanded && text.length > 320 ? text.slice(0, 320).trimEnd() + "…" : text;
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card-gradient p-6 shadow-soft sm:p-8">
-      <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
-        <Sparkles className="h-3.5 w-3.5" /> Executive summary
+    <div className="rounded-2xl border border-border/60 bg-card-gradient p-4 sm:p-8 relative">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
+          <Sparkles className="h-3.5 w-3.5" /> Executive summary
+        </div>
+
+        {!loading && source === "fallback" && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 border border-amber-200">
+              <AlertTriangle className="h-3 w-3" /> Using rule-based backup summary
+            </span>
+            <Button
+              onClick={onRetry}
+              variant="outline"
+              size="sm"
+              className="retry-btn h-7 text-xs px-2.5 bg-white border-amber-200 text-amber-800 hover:bg-amber-50 hover:text-amber-900"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" /> Retry AI Summary
+            </Button>
+          </div>
+        )}
+
+        {!loading && source === "ai" && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-800 border border-indigo-200">
+            <Sparkles className="h-3 w-3 text-indigo-600 animate-pulse" /> AI-Generated Report
+          </span>
+        )}
       </div>
-      <p className="text-pretty text-base leading-relaxed text-foreground sm:text-lg" style={{ whiteSpace: expanded ? "normal" : "pre-wrap" }}>
-        {preview}
-      </p>
-      {text.length > 320 ? (
-        <button
-          type="button"
-          className="mt-4 text-sm font-medium text-primary hover:text-primary/80"
-          onClick={() => setExpanded((prev) => !prev)}
-        >
-          {expanded ? "Show less" : "Read full summary"}
-        </button>
-      ) : null}
-      {note ? <p className="mt-3 text-xs text-muted-foreground">{note}</p> : null}
+
+      {loading ? (
+        <div className="space-y-3 py-2 animate-pulse">
+          <div className="h-4 bg-slate-200 rounded-md w-3/4"></div>
+          <div className="h-4 bg-slate-200 rounded-md w-11/12"></div>
+          <div className="h-4 bg-slate-200 rounded-md w-4/5"></div>
+          <div className="flex items-center gap-2 text-sm text-slate-500 font-medium pt-2">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" /> Generating dynamic AI
+            executive summary...
+          </div>
+        </div>
+      ) : (
+        <>
+          <p
+            className="text-pretty text-base leading-relaxed text-foreground sm:text-lg"
+            style={{ whiteSpace: expanded ? "normal" : "pre-wrap" }}
+          >
+            {preview}
+          </p>
+          {text.length > 320 && (
+            <button
+              type="button"
+              className="mt-4 text-sm font-medium text-primary hover:text-primary/80 animate-in fade-in"
+              onClick={() => setExpanded((prev) => !prev)}
+            >
+              {expanded ? "Show less" : "Read full summary"}
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -373,52 +450,139 @@ function SpendGraph({
   current,
   proposed,
   savings,
+  subscriptions,
 }: {
   current: number;
   proposed: number;
   savings: number;
+  subscriptions: ToolSubscription[];
 }) {
-  const maxValue = Math.max(current, proposed, savings, 1);
-  const entries = [
-    { label: "Current monthly spend", value: current, tone: "bg-slate-500" },
-    { label: "Proposed monthly spend", value: proposed, tone: "bg-primary" },
-    { label: "Monthly savings", value: savings, tone: "bg-success" },
+  const barData = [
+    { name: "Current Spend", amount: current, fill: "#64748b" },
+    { name: "Proposed Spend", amount: proposed, fill: "#6366f1" },
+    { name: "Monthly Savings", amount: savings, fill: "#10b981" },
+  ];
+
+  const donutData = subscriptions
+    .filter((sub) => sub.monthlySpend > 0)
+    .map((sub) => ({
+      name: TOOL_MAP[sub.tool]?.name || sub.tool,
+      value: sub.monthlySpend,
+    }));
+
+  const COLORS = [
+    "#6366f1", // indigo
+    "#10b981", // emerald
+    "#3b82f6", // blue
+    "#f59e0b", // amber
+    "#ec4899", // pink
+    "#8b5cf6", // violet
+    "#14b8a6", // teal
   ];
 
   return (
-    <div className="mt-6 rounded-2xl border border-border/60 bg-card p-6 shadow-soft">
-      <div className="mb-4 flex items-center justify-between gap-4">
+    <div className="mt-8 grid gap-6 md:grid-cols-2">
+      {/* Spend Comparison Bar Chart */}
+      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft flex flex-col justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Spend overview</h2>
-          <p className="text-sm text-muted-foreground">
-            Compare current spend, proposed spend, and savings visually.
-          </p>
+          <h3 className="text-lg font-semibold text-foreground">Spend Comparison</h3>
+          <p className="text-xs text-muted-foreground mb-4">Current vs proposed monthly run-rate</p>
         </div>
-        <div className="rounded-full bg-secondary/10 px-3 py-1 text-xs font-medium text-secondary-foreground">
-          Savings are {current > 0 ? `${Math.round((savings / current) * 100)}%` : "—"} of current spend
+        <div className="h-60 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={barData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+              <XAxis
+                dataKey="name"
+                stroke="#888888"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="#888888"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `$${value}`}
+              />
+              <Tooltip
+                formatter={(value) => [`$${value.toLocaleString()}`, "Amount"]}
+                contentStyle={{
+                  background: "white",
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                }}
+              />
+              <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
+                {barData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {entries.map((entry) => {
-          const width = Math.max(16, Math.min(100, (entry.value / maxValue) * 100));
-          return (
-            <div key={entry.label} className="rounded-3xl border border-border/70 bg-slate-50 p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between text-sm font-medium text-foreground">
-                <span>{entry.label}</span>
-                <span>${entry.value.toLocaleString()}</span>
-              </div>
-              <div className="h-4 overflow-hidden rounded-full bg-slate-200">
-                <div className={`${entry.tone} h-full rounded-full`} style={{ width: `${width}%` }} />
-              </div>
-              <div className="mt-3 text-xs text-muted-foreground">
-                {entry.value === 0
-                  ? "No spend detected"
-                  : `${width}% of the largest category`}
-              </div>
+      {/* Spend Allocation Donut Chart */}
+      <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-soft flex flex-col justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Spend Allocation</h3>
+          <p className="text-xs text-muted-foreground mb-4">Current monthly spend by tool</p>
+        </div>
+        {donutData.length === 0 ? (
+          <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
+            No active subscriptions listed.
+          </div>
+        ) : (
+          <div className="h-60 w-full flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="h-40 w-40 flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={donutData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={68}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {donutData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => [`$${value.toLocaleString()}`, "Spend"]}
+                    contentStyle={{
+                      background: "white",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          );
-        })}
+            <div className="flex flex-col gap-1.5 text-xs w-full max-h-40 overflow-y-auto pr-1">
+              {donutData.map((entry, index) => (
+                <div
+                  key={entry.name}
+                  className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1 last:border-0 last:pb-0"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className="truncate text-muted-foreground font-medium">{entry.name}</span>
+                  </div>
+                  <span className="font-semibold text-foreground">
+                    ${entry.value.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -443,41 +607,99 @@ function RecCard({ rec }: { rec: Recommendation }) {
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-soft transition-shadow hover:shadow-elevated">
-      <div className="grid gap-6 p-6 sm:grid-cols-[1fr_auto] sm:p-7">
-        <div>
-          <div className="mb-3 flex items-center gap-2">
+      <div className="p-4 sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground">
               <Icon className="h-4 w-4" />
             </div>
-            <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider ${sev}`}>
-              {rec.severity} priority
-            </span>
-            <span className="text-xs text-muted-foreground">· {TOOL_MAP[rec.toolId]?.name ?? rec.toolName}</span>
+            <div>
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider ${sev}`}
+              >
+                {rec.severity} priority
+              </span>
+              <span className="text-xs text-muted-foreground ml-2">
+                · {TOOL_MAP[rec.toolId]?.name ?? rec.toolName}
+              </span>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold tracking-tight sm:text-xl">{rec.action}</h3>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{rec.reasoning}</p>
-          <p className="mt-4 text-sm font-semibold text-foreground">
-            Impact: ${rec.monthlySavings.toLocaleString()}/mo saved, ${rec.yearlySavings.toLocaleString()}/yr potential.
-          </p>
 
-          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <span>
-              Current: <span className="font-medium text-foreground">${rec.currentSpend.toLocaleString()}/mo</span>
-            </span>
-            <span className="text-muted-foreground">
-              Proposed:{" "}
-              <span className="font-medium text-foreground">${rec.suggestedSpend.toLocaleString()}/mo</span>
-            </span>
+          <div className="text-left sm:text-right">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+              Monthly Savings
+            </div>
+            <div className="text-2xl font-bold tracking-tight text-[oklch(0.55_0.16_155)]">
+              ${rec.monthlySavings.toLocaleString()}
+              <span className="text-sm font-normal text-muted-foreground">/mo</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-start justify-center rounded-xl border border-border/60 bg-muted/40 p-5 sm:items-end sm:text-right">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Savings</div>
-          <div className="mt-1 text-2xl font-semibold tracking-tight text-[oklch(0.55_0.16_155)]">
-            ${rec.monthlySavings.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+        <h3 className="text-lg font-semibold tracking-tight sm:text-xl mb-3 text-slate-800">
+          {rec.action}
+        </h3>
+
+        {/* Sleek Plan Comparison Grid */}
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 rounded-xl bg-slate-50/70 border border-slate-100 p-4">
+          <div className="flex flex-col justify-between">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+              Current Plan Details
+            </span>
+            <div className="mt-1">
+              <span className="font-semibold text-slate-700 text-sm block truncate">
+                {rec.currentPlan || "N/A"}
+              </span>
+              <span className="text-xs text-slate-500">
+                ${rec.currentSpend.toLocaleString()}/mo spend
+              </span>
+            </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            ${rec.yearlySavings.toLocaleString()}/yr
+          <div className="flex flex-col justify-between border-t border-slate-200/60 pt-3 sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">
+              Recommended Action
+            </span>
+            <div className="mt-1">
+              <span className="font-semibold text-primary text-sm block truncate">
+                {rec.suggestedPlan || "N/A"}
+              </span>
+              <span className="text-xs text-slate-500">
+                {rec.type === "keep"
+                  ? "Same spend level"
+                  : `Optimized to $${rec.suggestedSpend.toLocaleString()}/mo`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Audit Justification
+            </h4>
+            <p className="text-sm leading-relaxed text-slate-600 font-normal">{rec.reasoning}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-100/80">
+            <div className="flex gap-x-6 text-xs text-muted-foreground">
+              <span>
+                Yearly Savings Potential:{" "}
+                <span className="font-bold text-slate-700">
+                  ${rec.yearlySavings.toLocaleString()}/yr
+                </span>
+              </span>
+            </div>
+
+            {rec.pricingUrl && (
+              <a
+                href={rec.pricingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors no-print"
+              >
+                View official pricing <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -490,22 +712,26 @@ function LeadCapture({
   monthlySavings,
   summary,
   auditUrl,
+  auditId,
+  initialTeamSize,
 }: {
   yearlySavings: number;
   monthlySavings: number;
   summary?: string;
   auditUrl: string;
+  auditId: string;
+  initialTeamSize: number;
 }) {
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
-  const [role, setRole] = useState("");
+  const [teamSize, setTeamSize] = useState<number | string>(initialTeamSize || "");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
-  const templateId = (import.meta as any).env?.VITE_EMAILJS_TEMPLATE_ID;
-  const userId = (import.meta as any).env?.VITE_EMAILJS_USER_ID;
-  const serviceId = (import.meta as any).env?.VITE_EMAILJS_SERVICE_ID || "service_g30qq5k";
+  const templateId = import.meta.env?.VITE_EMAILJS_TEMPLATE_ID;
+  const userId = import.meta.env?.VITE_EMAILJS_USER_ID;
+  const serviceId = import.meta.env?.VITE_EMAILJS_SERVICE_ID || "service_g30qq5k";
   const sendMethod = templateId && userId ? `EmailJS (${serviceId})` : "Server";
 
   async function submit(e: React.FormEvent) {
@@ -518,17 +744,15 @@ function LeadCapture({
 
     setSending(true);
     try {
-      // Prefer client-side EmailJS if configured (allows using provided service id)
-      const templateId = (import.meta as any).env?.VITE_EMAILJS_TEMPLATE_ID;
-      const userId = (import.meta as any).env?.VITE_EMAILJS_USER_ID;
-      const serviceId = (import.meta as any).env?.VITE_EMAILJS_SERVICE_ID || "service_g30qq5k";
+      const parsedTeamSize = Number(teamSize) || initialTeamSize;
 
+      // Prefer client-side EmailJS if configured
       if (templateId && userId) {
-        // Build template params
         const template_params = {
           to_email: email.trim(),
           company: company.trim(),
-          role: role.trim(),
+          teamSize: parsedTeamSize,
+          role: `Team Size: ${parsedTeamSize}`,
           audit_url: auditUrl,
           monthly_savings: monthlySavings,
           yearly_savings: yearlySavings,
@@ -553,13 +777,22 @@ function LeadCapture({
           return;
         }
 
-        // Success
         const fakeId = `emailjs_${Date.now()}`;
         try {
+          await saveLead({ data: { email, company, teamSize: parsedTeamSize, auditId } });
           const leads = JSON.parse(localStorage.getItem("credex.leads") || "[]");
-          leads.push({ email, company, role, at: new Date().toISOString(), emailId: fakeId });
+          leads.push({
+            email,
+            company,
+            teamSize: parsedTeamSize,
+            role: `Team Size: ${parsedTeamSize}`,
+            at: new Date().toISOString(),
+            emailId: fakeId,
+          });
           localStorage.setItem("credex.leads", JSON.stringify(leads));
-        } catch {}
+        } catch (err) {
+          console.warn("Failed to save lead local entry", err);
+        }
 
         setSubmitted(true);
         setSending(false);
@@ -571,7 +804,7 @@ function LeadCapture({
         data: {
           email: email.trim(),
           company: company.trim(),
-          role: role.trim(),
+          role: `Team Size: ${parsedTeamSize}`,
           auditUrl,
           monthlySavings,
           yearlySavings,
@@ -585,10 +818,17 @@ function LeadCapture({
         return;
       }
 
-      // Success — show confirmation
       try {
+        await saveLead({ data: { email, company, teamSize: parsedTeamSize, auditId } });
         const leads = JSON.parse(localStorage.getItem("credex.leads") || "[]");
-        leads.push({ email, company, role, at: new Date().toISOString(), emailId: response.id });
+        leads.push({
+          email,
+          company,
+          teamSize: parsedTeamSize,
+          role: `Team Size: ${parsedTeamSize}`,
+          at: new Date().toISOString(),
+          emailId: response.id,
+        });
         localStorage.setItem("credex.leads", JSON.stringify(leads));
       } catch {
         /* ignore localStorage error */
@@ -605,35 +845,51 @@ function LeadCapture({
   if (submitted) {
     return (
       <div className="rounded-2xl border border-border/60 bg-card p-8 text-center shadow-soft">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-[oklch(0.55_0.16_155)]" />
-        <h3 className="mt-3 text-2xl font-semibold tracking-tight">Report saved.</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Check your email for the full audit report. We'll flag the single highest-impact opportunity.
+        <CheckCircle2 className="mx-auto h-10 w-10 text-[oklch(0.55_0.16_155)] animate-in zoom-in duration-300" />
+        <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-800">Report saved.</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground leading-relaxed">
+          Check your email for the full audit report. We've flagged the single highest-impact
+          opportunity.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-soft">
-      <div className="grid gap-0 sm:grid-cols-[1.2fr_1fr]">
-        <div className="bg-savings p-8 text-primary-foreground sm:p-10">
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/15 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Mail className="h-3.5 w-3.5" /> Optional
+    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-soft lead-capture-section">
+      <div className="grid gap-0 sm:grid-cols-[1.2fr_1.5fr]">
+        <div className="bg-savings p-8 text-primary-foreground sm:p-10 flex flex-col justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/15 px-3 py-1 text-xs font-medium backdrop-blur">
+              <Mail className="h-3.5 w-3.5" /> Full Audit Details
+            </div>
+            <h3 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+              Get Full Report
+            </h3>
+            <p className="mt-2 text-primary-foreground/80 text-sm leading-relaxed">
+              Email this complete breakdown to yourself, your CFO, or your leadership team. We will
+              structure this into a clean, sharing-ready briefing document.
+              {yearlySavings > 0
+                ? ` Your stack currently has ~$${yearlySavings.toLocaleString()}/yr in clear savings potential.`
+                : ""}
+            </p>
           </div>
-          <h3 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Save this report.
-          </h3>
-          <p className="mt-2 text-primary-foreground/80">
-            Email it to yourself, your CFO, or your co-founder. We'll also flag the single highest-impact
-            change to do first
-            {yearlySavings > 0 ? ` — your stack has ~$${yearlySavings.toLocaleString()}/yr on the table.` : "."}
-          </p>
+          <div className="mt-6 text-xs text-primary-foreground/60 border-t border-primary-foreground/10 pt-4">
+            Security Guarantee: Your pricing numbers are secure. No spam, ever.
+          </div>
         </div>
-        <form onSubmit={submit} className="space-y-3 p-8 sm:p-10">
-            <div className="mb-2 text-xs text-muted-foreground">Sending via: <span className="font-medium text-foreground">{sendMethod}</span></div>
+        <form onSubmit={submit} className="space-y-4 p-8 sm:p-10 bg-white">
+          <div className="mb-2 text-xs text-muted-foreground flex items-center justify-between">
+            <span>Enterprise Savings Delivery</span>
+            <span className="font-semibold text-foreground text-[10px] uppercase bg-slate-100 px-2 py-0.5 rounded">
+              Via {sendMethod}
+            </span>
+          </div>
+
           <label className="block text-sm">
-            <span className="mb-1.5 block text-xs font-medium text-muted-foreground">Email</span>
+            <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
+              Work Email
+            </span>
             <input
               type="email"
               required
@@ -641,52 +897,63 @@ function LeadCapture({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
               disabled={sending}
-              className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+              className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 shadow-sm"
             />
           </label>
+
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-sm">
               <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Company <span className="opacity-60">(optional)</span>
+                Company Name
               </span>
               <input
+                required
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 maxLength={120}
+                placeholder="Acme Corp"
                 disabled={sending}
-                className="h-11 w-full rounded-lg border border-input bg-background px-3 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 shadow-sm"
               />
             </label>
+
             <label className="block text-sm">
               <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Role <span className="opacity-60">(optional)</span>
+                Team Size
               </span>
               <input
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                maxLength={120}
+                type="number"
+                required
+                min={1}
+                max={10000}
+                value={teamSize}
+                onChange={(e) => setTeamSize(e.target.value === "" ? "" : Number(e.target.value))}
                 disabled={sending}
-                className="h-11 w-full rounded-lg border border-input bg-background px-3 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 shadow-sm"
               />
             </label>
           </div>
+
           {error && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}
-          <Button type="submit" variant="hero" size="lg" className="w-full" disabled={sending}>
+
+          <Button type="submit" variant="hero" size="lg" className="w-full mt-2" disabled={sending}>
             {sending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Sending…
+                <Loader2 className="h-4 w-4 animate-spin mr-1" /> Generating Report…
               </>
             ) : (
               <>
-                Save report <ArrowRight className="h-4 w-4" />
+                Get Full Report <ArrowRight className="h-4 w-4 ml-1" />
               </>
             )}
           </Button>
-          <p className="text-center text-xs text-muted-foreground">No spam. Unsubscribe anytime.</p>
+          <p className="text-center text-xs text-muted-foreground pt-1">
+            Free PDF & email report delivered instantly.
+          </p>
         </form>
       </div>
     </div>

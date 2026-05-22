@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
         content:
           "Instantly audit your AI stack and uncover wasted spend across ChatGPT, Claude, Cursor, Copilot, Gemini, and more. Free, no login.",
       },
-      { property: "og:url", content: "https://your-domain.com/" },
+      { property: "og:url", content: "https://credex.app/" },
       { property: "og:site_name", content: "Credex" },
       { property: "og:title", content: "Credex — AI Spend Auditor" },
       {
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
           "Audit your AI tool spend in 60 seconds. Get a per-tool recommendation and a yearly savings number you can defend.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "https://your-domain.com/og-image.png" },
+      { property: "og:image", content: "https://credex.app/og-image.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Credex" },
       { name: "twitter:title", content: "Credex — AI Spend Auditor" },
@@ -39,11 +39,9 @@ export const Route = createFileRoute("/")({
         content:
           "Audit your AI tool spend in 60 seconds. Get a per-tool recommendation and a yearly savings number you can defend.",
       },
-      { name: "twitter:image", content: "https://your-domain.com/og-image.png" },
+      { name: "twitter:image", content: "https://credex.app/og-image.png" },
     ],
-    links: [
-      { rel: "canonical", href: "https://your-domain.com/" },
-    ],
+    links: [{ rel: "canonical", href: "https://credex.app/" }],
   }),
   component: LandingPage,
 });
@@ -77,13 +75,12 @@ function Hero() {
             Free audit · No signup · 60 seconds
           </div>
           <h1 className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-            Stop overpaying for{" "}
-            <span className="text-gradient">AI tools.</span>
+            Stop overpaying for <span className="text-gradient">AI tools.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
             Instantly audit your AI stack and uncover wasted spend across ChatGPT, Claude, Cursor,
-            Copilot, Gemini, and more. Get a per-tool recommendation and a yearly savings number
-            you can defend.
+            Copilot, Gemini, and more. Get a per-tool recommendation and a yearly savings number you
+            can defend.
           </p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="xl" variant="hero">
@@ -173,13 +170,20 @@ function SocialProof() {
           Built for teams running modern AI stacks
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-base font-medium text-muted-foreground/80">
-          {["ChatGPT", "Claude", "Cursor", "Copilot", "Gemini", "Anthropic API", "OpenAI API", "Windsurf"].map(
-            (n) => (
-              <span key={n} className="opacity-80">
-                {n}
-              </span>
-            )
-          )}
+          {[
+            "ChatGPT",
+            "Claude",
+            "Cursor",
+            "Copilot",
+            "Gemini",
+            "Anthropic API",
+            "OpenAI API",
+            "Windsurf",
+          ].map((n) => (
+            <span key={n} className="opacity-80">
+              {n}
+            </span>
+          ))}
         </div>
       </div>
     </section>
@@ -196,10 +200,10 @@ function Problem() {
             Every team is quietly overpaying.
           </h2>
           <p className="mt-5 text-lg text-muted-foreground">
-            AI tools billed monthly, per-seat, with overlapping features and surprise upgrades.
-            The average team we audit has{" "}
-            <span className="font-semibold text-foreground">3–5 redundant subscriptions</span> and is
-            on a higher tier than they actually use.
+            AI tools billed monthly, per-seat, with overlapping features and surprise upgrades. The
+            average team we audit has{" "}
+            <span className="font-semibold text-foreground">3–5 redundant subscriptions</span> and
+            is on a higher tier than they actually use.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4">

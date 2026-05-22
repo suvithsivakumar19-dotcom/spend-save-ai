@@ -54,6 +54,7 @@ Write the summary.
 ## Output validation
 
 Before showing AI output:
+
 - Length 60–180 words.
 - Must contain `$` and a comma-separated number matching `yearlySavings`.
 - Must NOT contain any number not present in the input.

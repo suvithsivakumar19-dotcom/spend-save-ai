@@ -7,7 +7,7 @@ import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { Button } from "@/components/ui/button";
 import { TOOLS, TOOL_MAP, USE_CASES, type ToolId, type UseCase } from "@/lib/pricing-data";
 import type { AuditInput, ToolSubscription } from "@/lib/types";
-import { encodeAuditInput } from "@/lib/share";
+import { saveAudit } from "@/lib/db";
 import { Route as AuditIdRoute } from "./audit.$id";
 
 const STORAGE_KEY = "credex.audit.input.v1";
@@ -37,29 +37,30 @@ export const Route = createFileRoute("/audit")({
       { title: "Run your audit — Credex" },
       {
         name: "description",
-        content: "List your AI tools, plans, and spend. Get an instant audit with monthly and yearly savings.",
+        content:
+          "List your AI tools, plans, and spend. Get an instant audit with monthly and yearly savings.",
       },
-      { property: "og:url", content: "https://your-domain.com/audit" },
+      { property: "og:url", content: "https://credex.app/audit" },
       { property: "og:site_name", content: "Credex" },
       { property: "og:title", content: "Run your AI spend audit — Credex" },
       {
         property: "og:description",
-        content: "List your AI tools, plans, and spend. Get an instant audit with monthly and yearly savings.",
+        content:
+          "List your AI tools, plans, and spend. Get an instant audit with monthly and yearly savings.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "https://your-domain.com/og-image.png" },
+      { property: "og:image", content: "https://credex.app/og-image.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Credex" },
       { name: "twitter:title", content: "Run your AI spend audit — Credex" },
       {
         name: "twitter:description",
-        content: "List your AI tools, plans, and spend. Get an instant audit with monthly and yearly savings.",
+        content:
+          "List your AI tools, plans, and spend. Get an instant audit with monthly and yearly savings.",
       },
-      { name: "twitter:image", content: "https://your-domain.com/og-image.png" },
+      { name: "twitter:image", content: "https://credex.app/og-image.png" },
     ],
-    links: [
-      { rel: "canonical", href: "https://your-domain.com/audit" },
-    ],
+    links: [{ rel: "canonical", href: "https://credex.app/audit" }],
   }),
   component: AuditPage,
 });
@@ -92,11 +93,9 @@ function AuditPage() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       // Debug: trace hydration
-      // eslint-disable-next-line no-console
       console.debug("[audit] hydrate: rawExists=", !!raw);
       if (raw) {
         const parsed = JSON.parse(raw) as AuditInput;
-        // eslint-disable-next-line no-console
         console.debug("[audit] parsed stored input", parsed);
         if (parsed?.subscriptions?.length) {
           setTeamSize(parsed.teamSize ?? 5);
@@ -119,7 +118,7 @@ function AuditPage() {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ teamSize, subscriptions: subs } satisfies AuditInput)
+        JSON.stringify({ teamSize, subscriptions: subs } satisfies AuditInput),
       );
     } catch {
       /* ignore */
@@ -128,7 +127,7 @@ function AuditPage() {
 
   const totalMonthly = useMemo(
     () => subs.reduce((s, x) => s + (Number(x.monthlySpend) || 0), 0),
-    [subs]
+    [subs],
   );
 
   function updateSub(id: string, patch: Partial<ToolSubscription>) {
@@ -153,7 +152,7 @@ function AuditPage() {
           }
         }
         return next;
-      })
+      }),
     );
   }
 
@@ -164,7 +163,15 @@ function AuditPage() {
     setSubs((prev) => (prev.length === 1 ? prev : prev.filter((s) => s.id !== id)));
   }
 
-  function onSubmit(e: React.FormEvent) {
+  // Reset submitting state if we navigate back to the form
+  useEffect(() => {
+    if (!isResultsRoute) {
+      setSubmitting(false);
+      setErrors(null);
+    }
+  }, [isResultsRoute]);
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrors(null);
     const input: AuditInput = { teamSize, subscriptions: subs };
@@ -174,35 +181,15 @@ function AuditPage() {
       return;
     }
     setSubmitting(true);
-    const token = encodeAuditInput(parsed.data);
-    // Debug: manual submit
-    // eslint-disable-next-line no-console
-    console.debug("[audit] manual submit, token=", token?.slice?.(0, 12));
-    // Navigate immediately (removed delay for faster feedback)
-    navigate({ to: "/audit/$id", params: { id: token } });
-    // Fallback: if navigation doesn't occur within 2s, clear the spinner and show an error.
-    // Use a mounted ref to avoid updating state after unmount.
-    setTimeout(() => {
-      try {
-        // eslint-disable-next-line no-console
-        console.debug("[audit] submit fallback check: location=", typeof window !== "undefined" ? window.location.href : "no-window");
-        const navigated = typeof window !== "undefined" && window.location.pathname.startsWith("/audit/");
-        if (!navigated) {
-          if (isMountedRef.current) {
-            setSubmitting(false);
-            setErrors("Navigation to results failed — check console or try again.");
-          }
-          // eslint-disable-next-line no-console
-          console.warn("[audit] navigation to results didn't complete within timeout");
-        } else {
-          // If we navigated successfully, ensure spinner cleared (if component still mounted)
-          if (isMountedRef.current) setSubmitting(false);
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn("[audit] submit fallback check failed", err);
+    try {
+      const id = await saveAudit({ data: parsed.data });
+      navigate({ to: "/audit/$id", params: { id } });
+    } catch (err) {
+      if (isMountedRef.current) {
+        setErrors("Failed to save audit. Please try again.");
+        setSubmitting(false);
       }
-    }, 2000);
+    }
   }
 
   if (isResultsRoute) {
@@ -220,7 +207,8 @@ function AuditPage() {
               List what you're paying for.
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-pretty text-muted-foreground">
-              Add every AI tool your team subscribes to. Numbers stay in your browser until you choose to save.
+              Add every AI tool your team subscribes to. Numbers stay in your browser until you
+              choose to save.
             </p>
           </div>
 
@@ -285,7 +273,13 @@ function AuditPage() {
             )}
 
             <div className="mt-8 flex flex-col items-center gap-3">
-              <Button type="submit" variant="hero" size="xl" disabled={submitting} className="w-full sm:w-auto">
+              <Button
+                type="submit"
+                variant="hero"
+                size="xl"
+                disabled={submitting}
+                className="w-full sm:w-auto"
+              >
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" /> Auditing your stack…
@@ -296,14 +290,79 @@ function AuditPage() {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Free · Instant · No signup
-              </p>
+              <p className="text-xs text-muted-foreground">Free · Instant · No signup</p>
             </div>
           </form>
         </div>
       </main>
       <SiteFooter />
+      {submitting && <AuditLoadingOverlay />}
+    </div>
+  );
+}
+
+function AuditLoadingOverlay() {
+  const [step, setStep] = useState(0);
+  const steps = [
+    "Running Credex Audit Engine...",
+    "Cross-referencing plan tier list prices...",
+    "Analyzing seat allocation efficiencies...",
+    "Detecting redundant chat & coding subscriptions...",
+    "Structuring optimized spend models...",
+  ];
+
+  useEffect(() => {
+    const intervals = [800, 1600, 2400, 3200, 4000];
+    const timers = intervals.map((ms, idx) => setTimeout(() => setStep(idx + 1), ms));
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="mx-4 max-w-md w-full rounded-2xl border border-white/20 bg-white/95 p-8 shadow-elevated text-slate-900 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex flex-col items-center text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+          <h3 className="text-xl font-semibold tracking-tight">Auditing Your Stack</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            Analyzing subscription data against 2025/2026 vendor pricing...
+          </p>
+        </div>
+        <div className="mt-8 space-y-4">
+          {steps.map((text, idx) => {
+            const isCompleted = step > idx;
+            const isActive = step === idx;
+            return (
+              <div
+                key={idx}
+                className={`flex items-center gap-3 transition-all duration-300 ${
+                  isCompleted
+                    ? "opacity-100"
+                    : isActive
+                      ? "opacity-100 animate-pulse"
+                      : "opacity-35"
+                }`}
+              >
+                <div
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold transition-all duration-300 ${
+                    isCompleted
+                      ? "bg-emerald-500 text-white shadow-soft"
+                      : isActive
+                        ? "bg-primary text-white ring-4 ring-primary/20"
+                        : "border border-slate-300 text-slate-400 bg-slate-50"
+                  }`}
+                >
+                  {isCompleted ? "✓" : idx + 1}
+                </div>
+                <span
+                  className={`text-sm ${isActive ? "font-semibold text-primary" : isCompleted ? "text-slate-800" : "text-slate-500"}`}
+                >
+                  {text}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

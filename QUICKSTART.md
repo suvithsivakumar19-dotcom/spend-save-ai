@@ -53,30 +53,33 @@ Email sent (or graceful fallback if no API key)
 
 ## Key Files to Know
 
-| File | Purpose |
-|---|---|
-| `src/routes/audit.tsx` | Input form (Step 1 of 2) |
+| File                       | Purpose                    |
+| -------------------------- | -------------------------- |
+| `src/routes/audit.tsx`     | Input form (Step 1 of 2)   |
 | `src/routes/audit.$id.tsx` | Results page (Step 2 of 2) |
-| `src/lib/audit-engine.ts` | Core audit logic (6 tests) |
-| `src/lib/send-email.ts` | Email server function |
-| `src/lib/share.ts` | URL encoding/decoding |
-| `src/lib/pricing-data.ts` | Tool definitions & plans |
+| `src/lib/audit-engine.ts`  | Core audit logic (6 tests) |
+| `src/lib/send-email.ts`    | Email server function      |
+| `src/lib/share.ts`         | URL encoding/decoding      |
+| `src/lib/pricing-data.ts`  | Tool definitions & plans   |
 
 ## Common Tasks
 
 ### Run Tests
+
 ```bash
 npm install -D vitest
 npm run vitest run
 ```
 
 ### Build for Production
+
 ```bash
 npm run build
 # Output in dist/ folder
 ```
 
 ### Add Email Sending
+
 ```bash
 # 1. Get free API key from resend.com
 # 2. Create .env.local:
@@ -87,11 +90,13 @@ npm run dev
 ```
 
 ### Format Code
+
 ```bash
 npm run format
 ```
 
 ### Lint Errors
+
 ```bash
 npm run lint
 ```
@@ -116,7 +121,7 @@ src/
     ui/                 ← shadcn/ui primitives
     site-chrome.tsx     ← Header/footer
   styles.css            ← Tailwind config
-  
+
 docs/
   README.md             ← Quick start
   ARCHITECTURE.md       ← System design
@@ -124,7 +129,7 @@ docs/
   DEPLOYMENT.md         ← Hosting guide
   FEATURES.md           ← Complete checklist
   TESTS.md              ← Test coverage
-  
+
 .env.local              ← Local secrets (create this)
 .env.example            ← Template for env vars
 ```

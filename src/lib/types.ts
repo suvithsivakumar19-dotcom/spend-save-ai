@@ -26,6 +26,9 @@ export interface Recommendation {
   yearlySavings: number;
   action: string;
   reasoning: string;
+  currentPlan?: string;
+  suggestedPlan?: string;
+  pricingUrl?: string;
 }
 
 export interface AuditResult {

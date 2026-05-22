@@ -73,18 +73,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Credex AI Spend Auditor" },
-      { name: "description", content: "Instantly audit your AI tool subscriptions for savings and optimized configurations." },
+      {
+        name: "description",
+        content:
+          "Instantly audit your AI tool subscriptions for savings and optimized configurations.",
+      },
       { name: "author", content: "Credex" },
       { property: "og:site_name", content: "Credex" },
       { property: "og:title", content: "Credex AI Spend Auditor" },
-      { property: "og:description", content: "Instantly audit your AI tool subscriptions for savings and optimized configurations." },
+      {
+        property: "og:description",
+        content:
+          "Instantly audit your AI tool subscriptions for savings and optimized configurations.",
+      },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "https://your-domain.com/og-image.png" },
+      { property: "og:image", content: "https://credex.app/og-image.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Credex" },
       { name: "twitter:title", content: "Credex AI Spend Auditor" },
-      { name: "twitter:description", content: "Instantly audit your AI tool subscriptions for savings and optimized configurations." },
-      { name: "twitter:image", content: "https://your-domain.com/og-image.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Instantly audit your AI tool subscriptions for savings and optimized configurations.",
+      },
+      { name: "twitter:image", content: "https://credex.app/og-image.png" },
     ],
     links: [
       {
@@ -93,7 +105,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "canonical",
-        href: "https://your-domain.com/",
+        href: "https://credex.app/",
       },
     ],
   }),

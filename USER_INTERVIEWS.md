@@ -10,12 +10,14 @@
 > around $3K? It's not the biggest line item so I haven't looked."
 
 **Pain points:**
+
 - No single owner. Finance pays the bills, engineering picks the tools.
 - "Free trial that became annual" — three of their tools are on autopilot.
 - Doesn't trust an AI recommendation about AI tools. "How would I know
   if Claude was telling me to drop Claude?"
 
 **Product insights:**
+
 - The trust angle is real. "Rule-based, no LLM in the audit" landed for her.
 - She'd pay for the done-for-you review specifically because she doesn't want
   to be the one calling sales.
@@ -35,6 +37,7 @@
 **Pain points:** None really. Curious, not bleeding.
 
 **Product insights:**
+
 - Empty-state matters. "Stack looks lean" needs to feel like a win, not a
   failed search. Updated the engine to surface a `keep` rec instead of a
   zero-state.
@@ -53,11 +56,13 @@
 > consolidation math and I'll consider it."
 
 **Pain points:**
+
 - Tool stacking is a status thing on her team.
 - The conversation isn't "should we cut Cursor" — it's "show me what we'd
   lose, in plain English, and let me decide."
 
 **Product insights:**
+
 - Consolidation recommendations need a "what you'd lose" line, not just a
   "what you'd save" line. **TODO week 2.**
 - She'd want a per-engineer view: who is paying for what and using what.

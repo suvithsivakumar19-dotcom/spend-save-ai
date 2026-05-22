@@ -1,6 +1,7 @@
 # Reflection
 
 ## 1. Hardest bug
+
 The first version of the engine double-counted savings: a `consolidate` rec
 would drop ChatGPT entirely, and a separate `downgrade` rec on the same
 ChatGPT row would also fire. Total savings displayed > current spend.
@@ -11,7 +12,9 @@ already-flagged one, and the totals function clamps with
 that would have caught it.
 
 ## 2. Decision I reversed
+
 Started with a generated AI summary via Anthropic. Pulled it. Two reasons:
+
 - Without an API key configured in the demo, the fallback was the path users
   actually saw — so the fallback **had** to be good. Once it was good, the AI
   version added latency and risk without much upside.
@@ -22,6 +25,7 @@ The summary is still upgradeable to Anthropic in one function. But the
 default is the deterministic version.
 
 ## 3. Week 2 roadmap
+
 1. Wire Supabase: real `audits` + `leads` tables, server fn for lead insert.
 2. Resend transactional email with the report link.
 3. Anthropic-augmented summary (additive, behind a flag).
@@ -31,6 +35,7 @@ default is the deterministic version.
 7. One paid SKU: "I'll go negotiate this for you — $X flat or 20% of savings."
 
 ## 4. AI usage reflection
+
 Used Lovable to scaffold faster than I could by hand. AI was great for
 boilerplate (form structure, route shells) and for design polish (gradient
 ideas, layout density). It was a worse judge of **product decisions** —
@@ -41,6 +46,7 @@ Lesson: AI assistance is a force multiplier on what you've already decided,
 not a substitute for deciding.
 
 ## 5. Self-evaluation
+
 - **Engine quality:** 8/10. Defensible, testable, but rules are still hand-coded.
   Want vendor-data ingestion before claiming 9.
 - **Design:** 8/10. Looks like a real product. Could push the results page harder

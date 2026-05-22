@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 
 function normalizeInput(text: string) {
   return text
@@ -14,7 +14,7 @@ function isDomainValid(d: string) {
 }
 
 export default function DomainsPage(): JSX.Element {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [limit] = useState(500);
   const domains = useMemo(() => normalizeInput(text), [text]);
   const unique = useMemo(() => Array.from(new Set(domains)).slice(0, limit), [domains, limit]);
@@ -26,12 +26,12 @@ export default function DomainsPage(): JSX.Element {
   }
 
   function exportCSV() {
-    const csv = unique.join('\n');
-    const blob = new Blob([csv], { type: 'text/plain;charset=utf-8' });
+    const csv = unique.join("\n");
+    const blob = new Blob([csv], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'domains.txt';
+    a.download = "domains.txt";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -40,10 +40,10 @@ export default function DomainsPage(): JSX.Element {
 
   async function copyAll() {
     try {
-      await navigator.clipboard.writeText(unique.join('\n'));
-      alert('Copied ' + unique.length + ' domains to clipboard');
+      await navigator.clipboard.writeText(unique.join("\n"));
+      alert("Copied " + unique.length + " domains to clipboard");
     } catch (e) {
-      alert('Copy failed — your browser may block clipboard access');
+      alert("Copy failed — your browser may block clipboard access");
     }
   }
 
@@ -73,14 +73,16 @@ export default function DomainsPage(): JSX.Element {
 
       <div style={styles.stats}>
         <div>Total parsed: {domains.length}</div>
-        <div>Unique (first {limit}): {unique.length}</div>
-        <div style={{ color: invalid.length ? '#c00' : '#080' }}>Invalid: {invalid.length}</div>
+        <div>
+          Unique (first {limit}): {unique.length}
+        </div>
+        <div style={{ color: invalid.length ? "#c00" : "#080" }}>Invalid: {invalid.length}</div>
       </div>
 
       {invalid.length > 0 && (
         <details style={styles.details}>
           <summary style={styles.summary}>Invalid domains ({invalid.length})</summary>
-          <pre style={styles.invalidList}>{invalid.join('\n')}</pre>
+          <pre style={styles.invalidList}>{invalid.join("\n")}</pre>
         </details>
       )}
 
@@ -103,7 +105,7 @@ export default function DomainsPage(): JSX.Element {
             <li>Initiate transfer at new registrar and provide the auth code.</li>
           </ol>
 
-          <p style={{ fontSize: 13, color: '#666' }}>
+          <p style={{ fontSize: 13, color: "#666" }}>
             Note: Transfers take time and are not required for email verification.
           </p>
         </div>
@@ -117,57 +119,57 @@ export default function DomainsPage(): JSX.Element {
 const styles: Record<string, React.CSSProperties> = {
   page: {
     maxWidth: 900,
-    margin: '16px auto',
+    margin: "16px auto",
     padding: 16,
-    boxSizing: 'border-box',
+    boxSizing: "border-box",
   },
   h1: { fontSize: 20, marginBottom: 12 },
   textarea: {
-    width: '100%',
+    width: "100%",
     minHeight: 180,
     padding: 12,
     fontSize: 16,
     borderRadius: 8,
-    border: '1px solid #ddd',
-    boxSizing: 'border-box',
-    resize: 'vertical',
+    border: "1px solid #ddd",
+    boxSizing: "border-box",
+    resize: "vertical",
   },
   row: {
-    display: 'flex',
+    display: "flex",
     gap: 8,
     marginTop: 12,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   primaryBtn: {
-    background: '#0b69ff',
-    color: 'white',
-    border: 'none',
-    padding: '10px 14px',
+    background: "#0b69ff",
+    color: "white",
+    border: "none",
+    padding: "10px 14px",
     borderRadius: 8,
     fontSize: 15,
   },
   secondaryBtn: {
-    background: '#f2f4f8',
-    border: '1px solid #d6dbe6',
-    padding: '10px 12px',
+    background: "#f2f4f8",
+    border: "1px solid #d6dbe6",
+    padding: "10px 12px",
     borderRadius: 8,
     fontSize: 15,
   },
   stats: {
-    display: 'flex',
+    display: "flex",
     gap: 12,
     marginTop: 12,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     fontSize: 14,
   },
   details: {
     marginTop: 16,
-    background: '#fff',
+    background: "#fff",
     borderRadius: 8,
     padding: 12,
-    border: '1px solid #eee',
+    border: "1px solid #eee",
   },
-  summary: { fontSize: 16, cursor: 'pointer' },
+  summary: { fontSize: 16, cursor: "pointer" },
   tipBlock: { fontSize: 14, lineHeight: 1.5 },
-  invalidList: { whiteSpace: 'pre-wrap', color: '#c00' },
+  invalidList: { whiteSpace: "pre-wrap", color: "#c00" },
 };

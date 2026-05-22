@@ -28,13 +28,13 @@ flowchart LR
 
 ## Tech stack reasoning
 
-| Choice | Why |
-|---|---|
-| TanStack Start | First-class file routing, SSR-ready, edge-deploy. Same model as Next.js App Router. |
-| Rules engine in TS | Deterministic, testable, no API key needed at runtime, no hallucination risk. |
-| URL-encoded state | Shareable reports without a DB. Trivial to swap for a Supabase `audits` row later. |
-| Tailwind v4 + tokens | Brand cohesion via `--gradient-savings`, `--shadow-glow`, etc. Zero ad-hoc colors. |
-| Zod | Single source of truth for input shape (form + server fn later). |
+| Choice               | Why                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| TanStack Start       | First-class file routing, SSR-ready, edge-deploy. Same model as Next.js App Router. |
+| Rules engine in TS   | Deterministic, testable, no API key needed at runtime, no hallucination risk.       |
+| URL-encoded state    | Shareable reports without a DB. Trivial to swap for a Supabase `audits` row later.  |
+| Tailwind v4 + tokens | Brand cohesion via `--gradient-savings`, `--shadow-glow`, etc. Zero ad-hoc colors.  |
+| Zod                  | Single source of truth for input shape (form + server fn later).                    |
 
 ## Scalability
 
@@ -49,7 +49,7 @@ flowchart LR
 - **Future DB layer.** Schema:
   - `audits(id, created_at, audit_data jsonb, recommendations jsonb, monthly_savings, yearly_savings, summary)`
   - `leads(id, email, company, role, audit_id, created_at)`
-  Both indexed on `created_at`. Audits are immutable.
+    Both indexed on `created_at`. Audits are immutable.
 
 ## Security
 

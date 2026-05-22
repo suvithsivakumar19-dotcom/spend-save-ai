@@ -103,7 +103,7 @@ export const TOOLS: ToolInfo[] = [
 ];
 
 export const TOOL_MAP: Record<ToolId, ToolInfo> = Object.fromEntries(
-  TOOLS.map((t) => [t.id, t])
+  TOOLS.map((t) => [t.id, t]),
 ) as Record<ToolId, ToolInfo>;
 
 export const USE_CASES = ["coding", "writing", "research", "data", "mixed"] as const;

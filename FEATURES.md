@@ -3,6 +3,7 @@
 ## Core Features — READY FOR PRODUCTION
 
 ### Landing Page
+
 - ✅ Modern SaaS homepage
 - ✅ Hero section with value proposition
 - ✅ CTA button: "Audit My AI Spend"
@@ -12,6 +13,7 @@
 - ✅ Example audit preview on landing
 
 ### Audit Input Form
+
 - ✅ Team size selector (1-10,000)
 - ✅ Tool selector dropdown (8 tools)
 - ✅ Plan selector (updates pricing automatically)
@@ -24,6 +26,7 @@
 - ✅ Form persistence to localStorage
 
 **Supported tools:**
+
 - ✅ ChatGPT (Free, Plus $20, Team $25, Enterprise $60)
 - ✅ Claude
 - ✅ Cursor
@@ -34,6 +37,7 @@
 - ✅ Windsurf / v0
 
 ### Audit Engine
+
 - ✅ Deterministic rule-based analysis (no AI black box)
 - ✅ ChatGPT Team → Plus downgrade rule
 - ✅ Cursor Business → Pro downgrade rule
@@ -45,6 +49,7 @@
 - ✅ 6 automated tests with 100% pass rate
 
 ### Results Dashboard
+
 - ✅ Total monthly savings display
 - ✅ Total yearly savings display
 - ✅ Per-tool recommendations
@@ -56,6 +61,7 @@
 - ✅ Animated counter displays
 
 ### Email Integration
+
 - ✅ Lead capture form (email, company, role)
 - ✅ Email validation
 - ✅ Server function for sending (Resend)
@@ -66,6 +72,7 @@
 - ✅ Loading state on button
 
 ### Shareable Public Reports
+
 - ✅ URL-encoded audit state (`/audit/$id`)
 - ✅ Base64url encoding of audit input
 - ✅ Deterministic URL generation
@@ -75,6 +82,7 @@
 - ✅ Browser-only computation
 
 ### Data Handling
+
 - ✅ localStorage persistence for form
 - ✅ localStorage for leads (fallback)
 - ✅ No PII in URLs
@@ -82,6 +90,7 @@
 - ✅ All processing in browser (no data sent)
 
 ### Design & UX
+
 - ✅ Responsive mobile-first design
 - ✅ Tailwind CSS v4 with semantic tokens
 - ✅ shadcn/ui components
@@ -92,6 +101,7 @@
 - ✅ Accessibility (semantic HTML, ARIA)
 
 ### Deployment
+
 - ✅ Vite build system
 - ✅ TanStack Start SSR
 - ✅ Cloudflare Workers compatible
@@ -100,6 +110,7 @@
 - ✅ Environment variable support
 
 ### Testing
+
 - ✅ 6 comprehensive Vitest cases
 - ✅ 100% pass rate
 - ✅ Audit engine tests
@@ -107,6 +118,7 @@
 - ✅ Edge case handling
 
 ### Documentation
+
 - ✅ README.md with quick start
 - ✅ ARCHITECTURE.md with system design
 - ✅ TESTS.md with test coverage
@@ -117,13 +129,13 @@
 
 ## Performance Metrics
 
-| Metric | Value | Status |
-|---|---|---|
-| Client bundle | 114 KB (gzip) | ✅ Excellent |
-| Server bundle | 735 KB | ✅ Good |
-| Audit latency | <1ms | ✅ Instant |
-| Page load (dev) | ~4s | ✅ Good |
-| Lighthouse Score | N/A (test after deploy) | 🔧 Ready |
+| Metric           | Value                   | Status       |
+| ---------------- | ----------------------- | ------------ |
+| Client bundle    | 114 KB (gzip)           | ✅ Excellent |
+| Server bundle    | 735 KB                  | ✅ Good      |
+| Audit latency    | <1ms                    | ✅ Instant   |
+| Page load (dev)  | ~4s                     | ✅ Good      |
+| Lighthouse Score | N/A (test after deploy) | 🔧 Ready     |
 
 ## Browser Support
 
@@ -164,6 +176,7 @@
 **YES** ✅
 
 All core features are complete, tested, and production-ready:
+
 - Feature complete ✅
 - Tests passing ✅
 - Documentation ready ✅
@@ -172,6 +185,7 @@ All core features are complete, tested, and production-ready:
 - Performance optimized ✅
 
 **To deploy:**
+
 ```bash
 npm run build
 # Deploy dist/client + dist/server to Vercel or Cloudflare
