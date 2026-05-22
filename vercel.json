@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/index.js": {
+      "runtime": "edge"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/assets/:path*",
+      "destination": "/client/assets/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}
