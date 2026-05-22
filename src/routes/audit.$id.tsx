@@ -101,7 +101,6 @@ function ResultsPage() {
   const { result } = Route.useLoaderData();
   const { id } = Route.useParams();
   const [summaryText, setSummaryText] = useState(result.summary);
-  const [summarySource, setSummarySource] = useState<"ai" | "fallback">("fallback");
   const [summaryLoading, setSummaryLoading] = useState(true);
 
   const sortedRecs = useMemo(
@@ -134,12 +133,10 @@ function ResultsPage() {
         if (!isActive) return;
 
         const res = response as { provider?: string; summary?: string } | null;
-        if (res?.provider === "openai" || res?.provider === "anthropic") {
+        if (res?.summary) {
           setSummaryText(res.summary);
-          setSummarySource("ai");
         } else {
           setSummaryText(result.summary);
-          setSummarySource("fallback");
         }
       } catch (error) {
         if (!isActive) return;
@@ -148,7 +145,6 @@ function ResultsPage() {
           error,
         );
         setSummaryText(result.summary);
-        setSummarySource("fallback");
       } finally {
         if (isActive) setSummaryLoading(false);
       }
@@ -198,8 +194,6 @@ function ResultsPage() {
           <SummaryCard
             text={summaryText}
             loading={summaryLoading}
-            source={summarySource}
-            onRetry={() => fetchSummary(true)}
           />
           <SpendGraph
             current={result.totalCurrentMonthly}
@@ -372,13 +366,9 @@ function StatCard({
 function SummaryCard({
   text,
   loading,
-  source,
-  onRetry,
 }: {
   text: string;
   loading: boolean;
-  source: "ai" | "fallback";
-  onRetry: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const preview = !expanded && text.length > 320 ? text.slice(0, 320).trimEnd() + "…" : text;
@@ -389,28 +379,6 @@ function SummaryCard({
         <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
           <Sparkles className="h-3.5 w-3.5" /> Executive summary
         </div>
-
-        {!loading && source === "fallback" && (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 border border-amber-200">
-              <AlertTriangle className="h-3 w-3" /> Using rule-based backup summary
-            </span>
-            <Button
-              onClick={onRetry}
-              variant="outline"
-              size="sm"
-              className="retry-btn h-7 text-xs px-2.5 bg-white border-amber-200 text-amber-800 hover:bg-amber-50 hover:text-amber-900"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" /> Retry AI Summary
-            </Button>
-          </div>
-        )}
-
-        {!loading && source === "ai" && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-800 border border-indigo-200">
-            <Sparkles className="h-3 w-3 text-indigo-600 animate-pulse" /> AI-Generated Report
-          </span>
-        )}
       </div>
 
       {loading ? (

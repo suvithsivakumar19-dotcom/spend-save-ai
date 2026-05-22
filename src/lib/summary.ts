@@ -26,8 +26,17 @@ export const generateAuditSummary = createServerFn({ method: "POST" })
     const input = ctx.data;
     const fallbackSummary = generateSummary(input);
 
-    const anthropicKey = process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY;
-    const openAiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+    const anthropicKey =
+      process.env.ANTHROPIC_API_KEY ||
+      process.env.VITE_ANTHROPIC_API_KEY ||
+      import.meta.env.ANTHROPIC_API_KEY ||
+      import.meta.env.VITE_ANTHROPIC_API_KEY;
+
+    const openAiKey =
+      process.env.OPENAI_API_KEY ||
+      process.env.VITE_OPENAI_API_KEY ||
+      import.meta.env.OPENAI_API_KEY ||
+      import.meta.env.VITE_OPENAI_API_KEY;
 
     // Build the query prompt
     const prompt = buildPrompt(input);

@@ -23,7 +23,10 @@ export const sendAuditEmail = createServerFn({ method: "POST" })
   .inputValidator((input: SendEmailInput) => input)
   .handler(async (ctx) => {
     const input = ctx.data;
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const resendApiKey =
+      process.env.RESEND_API_KEY ||
+      import.meta.env.RESEND_API_KEY ||
+      import.meta.env.VITE_RESEND_API_KEY;
 
     // Graceful fallback if no API key — still succeed but log warning
     if (!resendApiKey) {
@@ -37,8 +40,17 @@ export const sendAuditEmail = createServerFn({ method: "POST" })
         return { success: false, message: "Email address is required." };
       }
 
-      const fromAddress = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-      const replyTo = process.env.RESEND_REPLY_TO || "onboarding@resend.dev";
+      const fromAddress =
+        process.env.RESEND_FROM_EMAIL ||
+        import.meta.env.RESEND_FROM_EMAIL ||
+        import.meta.env.VITE_RESEND_FROM_EMAIL ||
+        "onboarding@resend.dev";
+
+      const replyTo =
+        process.env.RESEND_REPLY_TO ||
+        import.meta.env.RESEND_REPLY_TO ||
+        import.meta.env.VITE_RESEND_REPLY_TO ||
+        "onboarding@resend.dev";
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
