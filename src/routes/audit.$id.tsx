@@ -307,8 +307,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
     try {
       // 1. Dynamically import libraries to keep SSR building safe
-      const html2canvasModule = await import("html2canvas");
-      const html2canvas = html2canvasModule.default || html2canvasModule;
+      const { toCanvas } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
 
       // Temporarily force a beautiful desktop layout width so PDF looks stunning on all devices
@@ -351,12 +350,21 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       // Use a lower scale on mobile to drastically reduce memory usage and speed up capture
       const isMobile = window.innerWidth < 768;
 
-      // 2. Generate Canvas using html2canvas (highly optimized pure JS DOM painter, immune to mobile Safari SVG/foreignObject issues)
-      const canvas = await html2canvas(element, {
-        scale: isMobile ? 1.0 : 1.2, // 1.0x on mobile for instant rendering, 1.2x on desktop for sharpness
+      // 2. Generate Canvas using html-to-image (blazing fast and robust against Recharts SVG parsing crashes)
+      const canvas = await toCanvas(element, {
+        width,
+        height,
+        quality: isMobile ? 0.85 : 0.92,
+        pixelRatio: isMobile ? 1.0 : 1.1, // 1.0x on mobile for instant rendering, 1.1x on desktop for sharpness
+        skipFonts: true, // Speeds up generation immensely by skipping slow external font crawling
+        fontEmbedCSS: "", // Bypasses font stylesheet parsing completely for maximum speed!
         backgroundColor: "#f8fafc", // Maintain our premium slate-50/white background
-        useCORS: true, // Allow cross-origin images to load if server supports it, without breaking canvas
-        logging: false, // Keep console noise low
+        style: {
+          width: "1200px",
+          maxWidth: "1200px",
+          transform: "none",
+          transition: "none",
+        },
       });
 
       // Recalculate exact height after inserting page-break spacers
@@ -428,8 +436,13 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       }
       window.scrollTo(0, initialScrollY);
 
-      // Fallback to window.print() if client-side rendering fails
-      window.print();
+      // Display a beautiful notification instead of triggering the annoying generic print dialog
+      try {
+        const { toast } = await import("sonner");
+        toast.error("PDF export failed. Please try again or refresh.");
+      } catch {
+        alert("PDF export failed. Please refresh the page and try again.");
+      }
     } finally {
       document.documentElement.style.scrollBehavior = originalScrollBehavior;
       setPdfGenerating(false);
