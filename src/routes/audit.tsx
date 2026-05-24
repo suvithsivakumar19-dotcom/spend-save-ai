@@ -184,7 +184,7 @@ function AuditPage() {
     try {
       const id = await saveAudit({ data: parsed.data });
       // Deliberate satisfying delay to let the premium loading steps animate completely
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1200));
       navigate({ to: "/audit/$id", params: { id } });
     } catch (err) {
       if (isMountedRef.current) {
@@ -314,9 +314,9 @@ function AuditLoadingOverlay() {
   ];
 
   useEffect(() => {
-    // 300ms intervals perfectly matches the 1500ms delay for all 5 steps to complete smoothly
+    // 200ms intervals perfectly matches the 1200ms delay for all 5 steps to complete smoothly (1.0s to complete, 200ms pause)
     const timers = Array.from({ length: 5 }).map((_, idx) =>
-      setTimeout(() => setStep(idx + 1), 300 * (idx + 1)),
+      setTimeout(() => setStep(idx + 1), 200 * (idx + 1)),
     );
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -324,14 +324,15 @@ function AuditLoadingOverlay() {
   const progressPercent = Math.min(100, Math.round((step / steps.length) * 100));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-lg animate-in fade-in duration-300">
-      {/* Decorative backdrop glows */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300">
+      {/* Soft decorative backdrop glows */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-indigo-500/5 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-emerald-500/3 blur-[80px] rounded-full pointer-events-none" />
 
-      <div className="mx-4 max-w-md w-full rounded-2xl border border-slate-800/80 bg-slate-900/90 p-8 shadow-2xl shadow-indigo-500/5 text-slate-100 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* Premium White-themed Glassmorphism Card */}
+      <div className="mx-4 max-w-md w-full rounded-2xl border border-white/20 bg-white/95 p-8 shadow-2xl shadow-indigo-500/10 text-slate-800 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Sleek top progress indicator */}
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-slate-800">
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-slate-100">
           <div
             className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
@@ -341,16 +342,14 @@ function AuditLoadingOverlay() {
         <div className="flex flex-col items-center text-center">
           {/* Glowing Spinner */}
           <div className="relative mb-6 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-md animate-pulse" />
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
-              <Loader2 className="h-7 w-7 animate-spin text-indigo-400" />
+            <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-md animate-pulse" />
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-50 border border-slate-200">
+              <Loader2 className="h-7 w-7 animate-spin text-indigo-600" />
             </div>
           </div>
 
-          <h3 className="text-xl font-bold tracking-tight text-white bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-            Auditing Your Stack
-          </h3>
-          <p className="text-xs text-slate-400 mt-2 font-medium">
+          <h3 className="text-xl font-bold tracking-tight text-slate-900">Auditing Your Stack</h3>
+          <p className="text-xs text-slate-500 mt-2 font-medium">
             Analyzing subscription data against 2025/2026 vendor pricing...
           </p>
         </div>
@@ -368,7 +367,7 @@ function AuditLoadingOverlay() {
                     ? "opacity-100 transform translate-x-0"
                     : isActive
                       ? "opacity-100 transform translate-x-1"
-                      : "opacity-25"
+                      : "opacity-35"
                 }`}
               >
                 {/* Circle step counter / SVG checkmark */}
@@ -378,7 +377,7 @@ function AuditLoadingOverlay() {
                       ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/10 scale-105"
                       : isActive
                         ? "bg-indigo-600 text-white ring-4 ring-indigo-500/20 scale-105"
-                        : "border border-slate-700 text-slate-500 bg-slate-800/50"
+                        : "border border-slate-200 text-slate-400 bg-slate-50"
                   }`}
                 >
                   {isCompleted ? (
@@ -398,9 +397,9 @@ function AuditLoadingOverlay() {
                 <span
                   className={`text-sm transition-colors duration-300 ${
                     isActive
-                      ? "font-semibold text-indigo-300"
+                      ? "font-semibold text-indigo-600"
                       : isCompleted
-                        ? "text-slate-300 font-medium"
+                        ? "text-slate-800 font-medium"
                         : "text-slate-500"
                   }`}
                 >
