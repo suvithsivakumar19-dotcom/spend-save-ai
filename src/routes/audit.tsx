@@ -183,8 +183,8 @@ function AuditPage() {
     setSubmitting(true);
     try {
       const id = await saveAudit({ data: parsed.data });
-      // Deliberate satisfying delay to let the premium loading steps animate completely
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Deliberate satisfying delay to let the premium loading steps animate completely with organic easing timing
+      await new Promise((resolve) => setTimeout(resolve, 1850));
       navigate({ to: "/audit/$id", params: { id } });
     } catch (err) {
       if (isMountedRef.current) {
@@ -314,10 +314,9 @@ function AuditLoadingOverlay() {
   ];
 
   useEffect(() => {
-    // 200ms intervals perfectly matches the 1200ms delay for all 5 steps to complete smoothly (1.0s to complete, 200ms pause)
-    const timers = Array.from({ length: 5 }).map((_, idx) =>
-      setTimeout(() => setStep(idx + 1), 200 * (idx + 1)),
-    );
+    // Custom dynamic delays for organic, non-linear timing (slow at first, accelerating at the end)
+    const cumulativeDelays = [600, 1100, 1350, 1550, 1700];
+    const timers = cumulativeDelays.map((ms, idx) => setTimeout(() => setStep(idx + 1), ms));
     return () => timers.forEach(clearTimeout);
   }, []);
 
