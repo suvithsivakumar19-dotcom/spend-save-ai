@@ -65,6 +65,43 @@ export const Route = createFileRoute("/audit")({
   component: AuditPage,
 });
 
+const QUICK_PACKS = [
+  {
+    name: "Engineering Team",
+    description: "Standard developer & API stack",
+    icon: "💻",
+    teamSize: 15,
+    subscriptions: [
+      { tool: "cursor", plan: "business", monthlySpend: 40 * 15, seats: 15, useCase: "coding" },
+      { tool: "copilot", plan: "business", monthlySpend: 19 * 15, seats: 15, useCase: "coding" },
+      { tool: "chatgpt", plan: "team", monthlySpend: 25 * 10, seats: 10, useCase: "mixed" },
+      { tool: "openai_api", plan: "usage", monthlySpend: 150, seats: 1, useCase: "mixed" },
+    ],
+  },
+  {
+    name: "Lean Startup",
+    description: "Sleek, cost-effective starter stack",
+    icon: "🚀",
+    teamSize: 5,
+    subscriptions: [
+      { tool: "cursor", plan: "pro", monthlySpend: 20 * 5, seats: 5, useCase: "coding" },
+      { tool: "claude", plan: "pro", monthlySpend: 20 * 5, seats: 5, useCase: "writing" },
+      { tool: "chatgpt", plan: "plus", monthlySpend: 20 * 3, seats: 3, useCase: "research" },
+    ],
+  },
+  {
+    name: "Enterprise Ops",
+    description: "High-compliance business stack",
+    icon: "🏢",
+    teamSize: 50,
+    subscriptions: [
+      { tool: "chatgpt", plan: "enterprise", monthlySpend: 60 * 30, seats: 30, useCase: "mixed" },
+      { tool: "claude", plan: "team", monthlySpend: 30 * 20, seats: 20, useCase: "mixed" },
+      { tool: "gemini", plan: "business", monthlySpend: 20 * 15, seats: 15, useCase: "research" },
+    ],
+  },
+];
+
 function newRow(): ToolSubscription {
   return {
     id: Math.random().toString(36).slice(2, 10),
@@ -151,6 +188,14 @@ function AuditPage() {
             next.monthlySpend = plan.pricePerSeat * (next.seats || 1);
           }
         }
+        // Auto-recalculate spend when seats change
+        if (patch.seats !== undefined && patch.seats !== s.seats) {
+          const info = TOOL_MAP[next.tool as ToolId];
+          const plan = info?.plans.find((p) => p.id === next.plan);
+          if (plan && plan.pricePerSeat > 0) {
+            next.monthlySpend = plan.pricePerSeat * patch.seats;
+          }
+        }
         return next;
       }),
     );
@@ -210,6 +255,47 @@ function AuditPage() {
               Add every AI tool your team subscribes to. Numbers stay in your browser until you
               choose to save.
             </p>
+          </div>
+
+          {/* SaaS Quick-Pack Prefill Templates */}
+          <div className="mb-8 rounded-2xl border border-indigo-100/80 bg-indigo-50/20 p-4 sm:p-6 backdrop-blur">
+            <h3 className="text-sm font-semibold text-indigo-950 flex items-center gap-1.5">
+              💡 Quick Start: Prefill with a standard stack
+            </h3>
+            <p className="mt-1 text-xs text-indigo-900/60">
+              Select a preset template to populate the form instantly, then customize it to your
+              actual stack.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {QUICK_PACKS.map((pack) => (
+                <button
+                  key={pack.name}
+                  type="button"
+                  onClick={() => {
+                    setTeamSize(pack.teamSize);
+                    setSubs(
+                      pack.subscriptions.map((s) => ({
+                        ...s,
+                        id: Math.random().toString(36).slice(2, 10),
+                      })) as ToolSubscription[],
+                    );
+                    setPrefilled(true);
+                  }}
+                  className="flex flex-col text-left p-3.5 rounded-xl border border-indigo-100/50 bg-white hover:border-indigo-300 hover:shadow-soft transition-all duration-200 cursor-pointer group"
+                >
+                  <span className="text-xl mb-1 group-hover:scale-110 transition-transform duration-200">
+                    {pack.icon}
+                  </span>
+                  <span className="text-xs font-bold text-slate-800">{pack.name}</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                    {pack.description}
+                  </span>
+                  <span className="text-[9px] text-indigo-600 font-semibold mt-2.5 uppercase tracking-wide">
+                    {pack.subscriptions.length} Tools · Team of {pack.teamSize}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <form
@@ -382,7 +468,7 @@ function SubscriptionRow({
 }) {
   const info = TOOL_MAP[sub.tool as ToolId];
   return (
-    <div className="rounded-xl border border-border/60 bg-background/60 p-4 sm:p-5">
+    <div className="rounded-xl border border-border/60 bg-background/60 p-4 sm:p-5 transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-300">
       <div className="mb-4 flex items-center justify-between">
         <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Tool #{index + 1}
