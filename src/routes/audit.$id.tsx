@@ -307,7 +307,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
     try {
       // 1. Dynamically import libraries to keep SSR building safe
-      const { toCanvas } = await import("html-to-image");
+      const { default: html2canvas } = await import("html2canvas");
       const { jsPDF } = await import("jspdf");
 
       // Temporarily force a beautiful desktop layout width so PDF looks stunning on all devices
@@ -347,30 +347,22 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
         }
       });
 
+      // Use a lower scale on mobile to drastically reduce memory usage and speed up capture
+      const isMobile = window.innerWidth < 768;
+
+      // 2. Generate Canvas using html2canvas (highly optimized pure JS DOM painter, immune to mobile Safari SVG/foreignObject issues)
+      const canvas = await html2canvas(element, {
+        width: 1200, // Enforce our standard gorgeous desktop boundary for export layout
+        scale: isMobile ? 1.0 : 1.2, // 1.0x on mobile for instant rendering, 1.2x on desktop for sharpness
+        backgroundColor: "#f8fafc", // Maintain our premium slate-50/white background
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+      });
+
       // Recalculate exact height after inserting page-break spacers
       const width = 1200;
       const height = element.scrollHeight;
-
-      // Use a lower pixel ratio on mobile to drastically reduce GPU memory usage and speed up capture
-      const isMobile = window.innerWidth < 768;
-      const pixelRatio = isMobile ? 1.0 : 1.2;
-
-      // 2. Generate Canvas using html-to-image (blazing fast compared to toPng!)
-      const canvas = await toCanvas(element, {
-        width,
-        height,
-        quality: isMobile ? 0.9 : 0.95,
-        pixelRatio, // 1.0x on mobile for ultra-fast, 1.2x on desktop for high crispness
-        skipFonts: true, // Speeds up generation immensely by skipping slow external font crawling
-        fontEmbedCSS: "", // Bypasses font stylesheet parsing completely for maximum speed!
-        backgroundColor: "#f8fafc", // Keep the background color slate-50
-        style: {
-          width: "1200px",
-          maxWidth: "1200px",
-          transform: "none",
-          transition: "none",
-        },
-      });
 
       // --- CLEANUP ---
       // Remove all inserted page-break spacers
@@ -390,7 +382,12 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       }
       window.scrollTo(0, initialScrollY);
 
-      // 3. Create PDF dimensions for standard A4
+      // 3. Convert Canvas to JPEG (browser native engine - sub-20ms hardware accelerated)
+      const format = "JPEG";
+      const imageQuality = isMobile ? 0.85 : 0.92;
+      const imgData = canvas.toDataURL("image/jpeg", imageQuality);
+
+      // 4. Create PDF dimensions for standard A4
       const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210; // A4 size width in mm
       const pageHeight = 297; // A4 size height in mm
@@ -399,19 +396,19 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       let heightLeft = imgHeight;
       let position = 0;
 
-      // 4. Add pages if long document (passing the canvas object directly is incredibly fast!)
-      pdf.addImage(canvas, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+      // 5. Add pages using JPEG with FAST compression to bypass heavy pure-JS encoding
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
       heightLeft -= pageHeight;
 
       // Use a small threshold (2mm) to prevent accidental blank page generation due to rounding
       while (heightLeft > 2) {
         position = heightLeft - imgHeight; // Slide up the image
         pdf.addPage();
-        pdf.addImage(canvas, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
         heightLeft -= pageHeight;
       }
 
-      // 5. Save the PDF file directly
+      // 6. Save the PDF file directly
       pdf.save(`credex-ai-spend-audit-${result.id || "report"}.pdf`);
     } catch (err) {
       console.error("PDF generation failed:", err);
