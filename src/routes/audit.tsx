@@ -182,9 +182,13 @@ function AuditPage() {
     }
     setSubmitting(true);
     try {
-      const id = await saveAudit({ data: parsed.data });
-      // Deliberate satisfying delay to let the premium loading steps animate completely with organic easing timing
-      await new Promise((resolve) => setTimeout(resolve, 1850));
+      // Execute the database save and the checklist progress timer in parallel
+      const savePromise = saveAudit({ data: parsed.data });
+      const delayPromise = new Promise((resolve) => setTimeout(resolve, 1720)); // aligns perfectly with the 1700ms step-5 check
+
+      // Wait for both to complete
+      const [id] = await Promise.all([savePromise, delayPromise]);
+
       navigate({ to: "/audit/$id", params: { id } });
     } catch (err) {
       if (isMountedRef.current) {
