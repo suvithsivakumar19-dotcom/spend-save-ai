@@ -64,7 +64,10 @@ export const saveAudit = createServerFn({ method: "POST" })
 
       return data.id as string;
     } catch (err) {
-      console.warn("Supabase save failed or unconfigured, falling back to local base64 encoding:", err);
+      console.warn(
+        "Supabase save failed or unconfigured, falling back to local base64 encoding:",
+        err,
+      );
       return encodeLocalData(ctx.data);
     }
   });
@@ -81,11 +84,7 @@ export const getAudit = createServerFn({ method: "GET" })
     try {
       const supabase = getServerSupabase();
 
-      const { data, error } = await supabase
-        .from("audits")
-        .select("input")
-        .eq("id", id)
-        .single();
+      const { data, error } = await supabase.from("audits").select("input").eq("id", id).single();
 
       if (error || !data) {
         throw error || new Error("No audit found with that ID");
@@ -93,7 +92,10 @@ export const getAudit = createServerFn({ method: "GET" })
 
       return data.input as AuditInput;
     } catch (err) {
-      console.warn("Supabase fetch failed or unconfigured, attempting direct base64 decode as fallback:", err);
+      console.warn(
+        "Supabase fetch failed or unconfigured, attempting direct base64 decode as fallback:",
+        err,
+      );
       // As a final safety fallback, check if the ID itself is a valid base64 payload
       const decoded = decodeLocalData(id);
       if (decoded && decoded.subscriptions) {
@@ -117,7 +119,9 @@ export const saveLead = createServerFn({ method: "POST" })
   .handler(async (ctx) => {
     try {
       const supabase = getServerSupabase();
-      const finalRole = ctx.data.teamSize ? `Team Size: ${ctx.data.teamSize}` : ctx.data.role || null;
+      const finalRole = ctx.data.teamSize
+        ? `Team Size: ${ctx.data.teamSize}`
+        : ctx.data.role || null;
 
       const { error } = await supabase.from("leads").insert({
         email: ctx.data.email,
@@ -132,7 +136,10 @@ export const saveLead = createServerFn({ method: "POST" })
 
       return { success: true };
     } catch (err) {
-      console.warn("Supabase lead capture failed or unconfigured, returning local mock success:", err);
+      console.warn(
+        "Supabase lead capture failed or unconfigured, returning local mock success:",
+        err,
+      );
       return { success: true };
     }
   });

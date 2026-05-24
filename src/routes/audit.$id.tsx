@@ -191,10 +191,7 @@ function ResultsPage() {
         <ResultsHero result={result} />
 
         <section className="mx-auto max-w-5xl px-4 sm:px-6">
-          <SummaryCard
-            text={summaryText}
-            loading={summaryLoading}
-          />
+          <SummaryCard text={summaryText} loading={summaryLoading} />
           <SpendGraph
             current={result.totalCurrentMonthly}
             proposed={result.totalProposedMonthly}
@@ -265,63 +262,131 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
     if (typeof window === "undefined") return;
     setPdfGenerating(true);
 
+    const element = document.querySelector("main");
+    if (!element) {
+      setPdfGenerating(false);
+      return;
+    }
+
+    // Save scroll position and scroll to top for clean rendering
+    const initialScrollY = window.scrollY;
+    window.scrollTo(0, 0);
+
+    // Give a tiny moment for layout to settle on top scroll if rendering engine needs it
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Save original styles to restore them after capture
+    const originalWidth = element.style.width;
+    const originalMaxWidth = element.style.maxWidth;
+
+    // Identify elements to exclude/hide from the printed PDF to ensure accurate scrollHeight measurement
+    const elementsToHide = element.querySelectorAll(
+      ".no-print, .lead-capture-section, .copy-btn, .re-run-btn",
+    );
+    const leadCapture = element.querySelector(".lead-capture-section");
+    const leadCaptureParent = leadCapture?.closest("section");
+
+    // Save original display states and temporarily hide them
+    const originalDisplays = new Map<HTMLElement, string>();
+    elementsToHide.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        originalDisplays.set(el, el.style.display);
+        el.style.display = "none";
+      }
+    });
+
+    let originalLeadParentDisplay = "";
+    if (leadCaptureParent instanceof HTMLElement) {
+      originalLeadParentDisplay = leadCaptureParent.style.display;
+      leadCaptureParent.style.display = "none";
+    }
+
     try {
       // 1. Dynamically import libraries to keep SSR building safe
       const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
 
-      const element = document.querySelector("main");
-      if (!element) {
-        throw new Error("Could not find main container element");
-      }
+      // Temporarily force a beautiful desktop layout width so PDF looks stunning on all devices
+      element.style.width = "1200px";
+      element.style.maxWidth = "1200px";
 
-      // Save scroll position and scroll to top for clean rendering
-      const initialScrollY = window.scrollY;
-      window.scrollTo(0, 0);
+      // Give a tiny moment for layout engine to settle with the new width
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      // Give a tiny moment for layout to settle on top scroll if rendering engine needs it
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // --- PAGE-BREAK AVOIDANCE ALGORITHM ---
+      const PAGE_HEIGHT_PX = (297 * 1200) / 210; // ~1697.14px per A4 page
+      const cards = element.querySelectorAll(
+        "article, .bg-card-gradient, .shadow-soft.flex.flex-col.justify-between",
+      );
+
+      cards.forEach((card) => {
+        if (card instanceof HTMLElement) {
+          const cardTop = card.getBoundingClientRect().top - element.getBoundingClientRect().top;
+          const cardBottom =
+            card.getBoundingClientRect().bottom - element.getBoundingClientRect().top;
+          const cardHeight = card.offsetHeight;
+
+          // Only insert spacer if the card itself fits inside a single page
+          if (cardHeight < PAGE_HEIGHT_PX) {
+            const pageIndex = Math.floor(cardTop / PAGE_HEIGHT_PX);
+            const pageBoundary = (pageIndex + 1) * PAGE_HEIGHT_PX;
+
+            // If the card crosses a page boundary, push it onto the next page
+            if (cardBottom > pageBoundary) {
+              const spacerHeight = pageBoundary - cardTop;
+              const spacer = document.createElement("div");
+              spacer.className = "pdf-spacer";
+              spacer.style.height = `${spacerHeight}px`;
+              card.parentNode?.insertBefore(spacer, card);
+            }
+          }
+        }
+      });
+
+      // Recalculate exact height after inserting page-break spacers
+      const width = 1200;
+      const height = element.scrollHeight;
 
       // 2. Generate PNG image using html-to-image (handles modern OKLCH CSS & SVGs seamlessly)
       const imgData = await toPng(element, {
+        width,
+        height,
         quality: 0.95,
+        pixelRatio: 1.5, // 1.5x resolution is perfect for crisp print quality and super fast processing
+        skipFonts: true, // Speeds up generation immensely by skipping slow external font crawling
         backgroundColor: "#f8fafc", // Keep the background color slate-50
         style: {
+          width: "1200px",
+          maxWidth: "1200px",
           transform: "none",
           transition: "none",
         },
-        filter: (node) => {
-          // Exclude interactive controls, forms, or any items with specific classes/tags
-          if (node instanceof HTMLElement) {
-            return !(
-              node.classList.contains("no-print") ||
-              node.classList.contains("lead-capture-section") ||
-              node.classList.contains("copy-btn") ||
-              node.classList.contains("re-run-btn") ||
-              node.tagName === "HEADER" ||
-              node.tagName === "FOOTER"
-            );
-          }
-          return true;
-        },
       });
 
-      // Restore scroll position
+      // --- CLEANUP ---
+      // Remove all inserted page-break spacers
+      const insertedSpacers = element.querySelectorAll(".pdf-spacer");
+      insertedSpacers.forEach((s) => s.remove());
+
+      // Restore original element styles immediately after capture
+      element.style.width = originalWidth;
+      element.style.maxWidth = originalMaxWidth;
+      elementsToHide.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.display = originalDisplays.get(el) || "";
+        }
+      });
+      if (leadCaptureParent instanceof HTMLElement) {
+        leadCaptureParent.style.display = originalLeadParentDisplay;
+      }
       window.scrollTo(0, initialScrollY);
 
       // 3. Create PDF dimensions for standard A4
       const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210; // A4 size width in mm
       const pageHeight = 297; // A4 size height in mm
+      const imgHeight = (height * imgWidth) / width;
 
-      // Wait for image dimensions to calculate proper aspect ratio
-      const img = new Image();
-      img.src = imgData;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-      });
-
-      const imgHeight = (img.height * imgWidth) / img.width;
       let heightLeft = imgHeight;
       let position = 0;
 
@@ -329,7 +394,8 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
       heightLeft -= pageHeight;
 
-      while (heightLeft >= 0) {
+      // Use a small threshold (2mm) to prevent accidental blank page generation due to rounding
+      while (heightLeft > 2) {
         position = heightLeft - imgHeight; // Slide up the image
         pdf.addPage();
         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
@@ -340,6 +406,23 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       pdf.save(`credex-ai-spend-audit-${result.id || "report"}.pdf`);
     } catch (err) {
       console.error("PDF generation failed:", err);
+      // Ensure clean restoration of DOM even in case of error
+      const insertedSpacers = element.querySelectorAll(".pdf-spacer");
+      insertedSpacers.forEach((s) => s.remove());
+
+      // Ensure we restore layout styles, displays, and scroll position in case of failure
+      element.style.width = originalWidth;
+      element.style.maxWidth = originalMaxWidth;
+      elementsToHide.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          el.style.display = originalDisplays.get(el) || "";
+        }
+      });
+      if (leadCaptureParent instanceof HTMLElement) {
+        leadCaptureParent.style.display = originalLeadParentDisplay;
+      }
+      window.scrollTo(0, initialScrollY);
+
       // Fallback to window.print() if client-side rendering fails
       window.print();
     } finally {
@@ -460,13 +543,7 @@ function StatCard({
   );
 }
 
-function SummaryCard({
-  text,
-  loading,
-}: {
-  text: string;
-  loading: boolean;
-}) {
+function SummaryCard({ text, loading }: { text: string; loading: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const preview = !expanded && text.length > 320 ? text.slice(0, 320).trimEnd() + "…" : text;
 
