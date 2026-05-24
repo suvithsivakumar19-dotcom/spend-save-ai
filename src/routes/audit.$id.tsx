@@ -303,7 +303,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
     try {
       // 1. Dynamically import libraries to keep SSR building safe
-      const { toPng } = await import("html-to-image");
+      const { toCanvas } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
 
       // Temporarily force a beautiful desktop layout width so PDF looks stunning on all devices
@@ -347,13 +347,14 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       const width = 1200;
       const height = element.scrollHeight;
 
-      // 2. Generate PNG image using html-to-image (handles modern OKLCH CSS & SVGs seamlessly)
-      const imgData = await toPng(element, {
+      // 2. Generate Canvas using html-to-image (blazing fast compared to toPng!)
+      const canvas = await toCanvas(element, {
         width,
         height,
         quality: 0.95,
         pixelRatio: 1.5, // 1.5x resolution is perfect for crisp print quality and super fast processing
         skipFonts: true, // Speeds up generation immensely by skipping slow external font crawling
+        fontEmbedCSS: "", // Bypasses font stylesheet parsing completely for maximum speed!
         backgroundColor: "#f8fafc", // Keep the background color slate-50
         style: {
           width: "1200px",
@@ -390,15 +391,15 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       let heightLeft = imgHeight;
       let position = 0;
 
-      // 4. Add pages if long document
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+      // 4. Add pages if long document (passing the canvas object directly is incredibly fast!)
+      pdf.addImage(canvas, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
       heightLeft -= pageHeight;
 
       // Use a small threshold (2mm) to prevent accidental blank page generation due to rounding
       while (heightLeft > 2) {
         position = heightLeft - imgHeight; // Slide up the image
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+        pdf.addImage(canvas, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
         heightLeft -= pageHeight;
       }
 
