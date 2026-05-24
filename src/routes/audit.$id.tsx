@@ -347,25 +347,39 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
         }
       });
 
-      // Use a lower scale on mobile to drastically reduce memory usage and speed up capture
       const isMobile = window.innerWidth < 768;
+      let canvas: HTMLCanvasElement;
 
-      // 2. Generate Canvas using html-to-image (blazing fast and robust against Recharts SVG parsing crashes)
-      const canvas = await toCanvas(element, {
-        width,
-        height,
-        quality: isMobile ? 0.85 : 0.92,
-        pixelRatio: isMobile ? 1.0 : 1.1, // 1.0x on mobile for instant rendering, 1.1x on desktop for sharpness
-        skipFonts: true, // Speeds up generation immensely by skipping slow external font crawling
-        fontEmbedCSS: "", // Bypasses font stylesheet parsing completely for maximum speed!
-        backgroundColor: "#f8fafc", // Maintain our premium slate-50/white background
-        style: {
-          width: "1200px",
-          maxWidth: "1200px",
-          transform: "none",
-          transition: "none",
-        },
-      });
+      try {
+        // Try Engine 1: html-to-image (fast, robust against Recharts SVGs)
+        canvas = await toCanvas(element, {
+          width: 1200,
+          height: element.scrollHeight,
+          quality: isMobile ? 0.85 : 0.92,
+          pixelRatio: isMobile ? 1.0 : 1.1,
+          skipFonts: true,
+          fontEmbedCSS: "",
+          backgroundColor: "#f8fafc",
+          style: {
+            width: "1200px",
+            maxWidth: "1200px",
+            transform: "none",
+            transition: "none",
+          },
+        });
+      } catch (e1) {
+        console.warn("html-to-image failed, falling back to html2canvas:", e1);
+        
+        // Try Engine 2: html2canvas (highly compatible pure-JS layout parser)
+        const html2canvasModule = await import("html2canvas");
+        const html2canvas = html2canvasModule.default || html2canvasModule;
+        canvas = await html2canvas(element, {
+          scale: isMobile ? 1.0 : 1.1,
+          backgroundColor: "#f8fafc",
+          useCORS: true,
+          logging: false,
+        });
+      }
 
       // Recalculate exact height after inserting page-break spacers
       const width = 1200;
@@ -415,8 +429,19 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
         heightLeft -= pageHeight;
       }
 
-      // 6. Save the PDF file directly
-      pdf.save(`credex-ai-spend-audit-${result.id || "report"}.pdf`);
+      // 6. Deliver the PDF based on browser capabilities
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+      if (isMobile || isIOS || isSafari) {
+        // Asynchronous programmatic file downloading is silently blocked on iOS Safari.
+        // Opening directly in the current window using blob URL bypasses the popup block perfectly.
+        const blob = pdf.output("blob");
+        const blobUrl = URL.createObjectURL(blob);
+        window.location.href = blobUrl;
+      } else {
+        pdf.save(`credex-ai-spend-audit-${result.id || "report"}.pdf`);
+      }
     } catch (err) {
       console.error("PDF generation failed:", err);
       // Ensure clean restoration of DOM even in case of error
