@@ -36,7 +36,7 @@ default is the deterministic version.
 
 ## 4. AI usage reflection
 
-Used Lovable to scaffold faster than I could by hand. AI was great for
+Used AI assistance to scaffold faster than I could by hand. AI was great for
 boilerplate (form structure, route shells) and for design polish (gradient
 ideas, layout density). It was a worse judge of **product decisions** —
 e.g., suggested adding social auth, suggested adding 12 more tools, suggested

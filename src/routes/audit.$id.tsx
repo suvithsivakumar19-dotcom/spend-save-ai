@@ -241,6 +241,7 @@ function ResultsPage() {
 function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
   const url = typeof window !== "undefined" ? window.location.href : "";
 
   async function copy() {
@@ -258,6 +259,82 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       window.localStorage.setItem("credex.audit.input.v1", JSON.stringify(result.input));
     }
     navigate({ to: "/audit" });
+  }
+
+  async function handleDownloadPDF() {
+    if (typeof window === "undefined") return;
+    setPdfGenerating(true);
+
+    try {
+      // 1. Dynamically import libraries to keep SSR building safe
+      const { default: html2canvas } = await import("html2canvas");
+      const { jsPDF } = await import("jspdf");
+
+      const element = document.querySelector("main");
+      if (!element) {
+        throw new Error("Could not find main container element");
+      }
+
+      // Save scroll position and scroll to top for clean canvas rendering
+      const initialScrollY = window.scrollY;
+      window.scrollTo(0, 0);
+
+      // Give a tiny moment for layout to settle on top scroll if rendering engine needs it
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // 2. Capture canvas with high resolution
+      const canvas = await html2canvas(element, {
+        scale: 2, // Sharpness/high DPI
+        useCORS: true, // Handle external assets
+        logging: false,
+        backgroundColor: "#f8fafc", // Retain background color
+        ignoreElements: (el) => {
+          // Hide interactive controls, forms, or any items with the .no-print or other classes
+          return (
+            el.classList.contains("no-print") ||
+            el.classList.contains("lead-capture-section") ||
+            el.classList.contains("copy-btn") ||
+            el.classList.contains("re-run-btn") ||
+            el.tagName === "HEADER" ||
+            el.tagName === "FOOTER"
+          );
+        },
+      });
+
+      // Restore scroll position
+      window.scrollTo(0, initialScrollY);
+
+      // 3. Convert canvas to image
+      const imgData = canvas.toDataURL("image/png");
+
+      // 4. Calculate dimensions for standard A4
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210; // A4 size width in mm
+      const pageHeight = 297; // A4 size height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // 5. Add pages if long document
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight; // Slide up the image
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
+        heightLeft -= pageHeight;
+      }
+
+      // 6. Save the PDF
+      pdf.save(`credex-ai-spend-audit-${result.id || "report"}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      // Fallback to window.print() if client-side rendering fails
+      window.print();
+    } finally {
+      setPdfGenerating(false);
+    }
   }
 
   return (
@@ -293,12 +370,22 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
         <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center no-print">
           <Button
-            onClick={() => window.print()}
+            onClick={handleDownloadPDF}
             variant="outline"
             size="lg"
+            disabled={pdfGenerating}
             className="border-indigo-200 hover:border-indigo-300 text-indigo-700 bg-white"
           >
-            <Printer className="h-4 w-4 mr-2" /> Download PDF Report
+            {pdfGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin text-indigo-600" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Printer className="h-4 w-4 mr-2" /> Download PDF Report
+              </>
+            )}
           </Button>
           <Button onClick={copy} variant="outline" size="lg" className="copy-btn">
             <Copy className="h-4 w-4 mr-2" />
