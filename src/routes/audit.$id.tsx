@@ -307,7 +307,8 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
     try {
       // 1. Dynamically import libraries to keep SSR building safe
-      const { default: html2canvas } = await import("html2canvas");
+      const html2canvasModule = await import("html2canvas");
+      const html2canvas = html2canvasModule.default || html2canvasModule;
       const { jsPDF } = await import("jspdf");
 
       // Temporarily force a beautiful desktop layout width so PDF looks stunning on all devices
@@ -352,12 +353,10 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
       // 2. Generate Canvas using html2canvas (highly optimized pure JS DOM painter, immune to mobile Safari SVG/foreignObject issues)
       const canvas = await html2canvas(element, {
-        width: 1200, // Enforce our standard gorgeous desktop boundary for export layout
         scale: isMobile ? 1.0 : 1.2, // 1.0x on mobile for instant rendering, 1.2x on desktop for sharpness
         backgroundColor: "#f8fafc", // Maintain our premium slate-50/white background
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
+        useCORS: true, // Allow cross-origin images to load if server supports it, without breaking canvas
+        logging: false, // Keep console noise low
       });
 
       // Recalculate exact height after inserting page-break spacers
