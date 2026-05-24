@@ -65,43 +65,6 @@ export const Route = createFileRoute("/audit")({
   component: AuditPage,
 });
 
-const QUICK_PACKS = [
-  {
-    name: "Engineering Team",
-    description: "Standard developer & API stack",
-    icon: "💻",
-    teamSize: 15,
-    subscriptions: [
-      { tool: "cursor", plan: "business", monthlySpend: 40 * 15, seats: 15, useCase: "coding" },
-      { tool: "copilot", plan: "business", monthlySpend: 19 * 15, seats: 15, useCase: "coding" },
-      { tool: "chatgpt", plan: "team", monthlySpend: 25 * 10, seats: 10, useCase: "mixed" },
-      { tool: "openai_api", plan: "usage", monthlySpend: 150, seats: 1, useCase: "mixed" },
-    ],
-  },
-  {
-    name: "Lean Startup",
-    description: "Sleek, cost-effective starter stack",
-    icon: "🚀",
-    teamSize: 5,
-    subscriptions: [
-      { tool: "cursor", plan: "pro", monthlySpend: 20 * 5, seats: 5, useCase: "coding" },
-      { tool: "claude", plan: "pro", monthlySpend: 20 * 5, seats: 5, useCase: "writing" },
-      { tool: "chatgpt", plan: "plus", monthlySpend: 20 * 3, seats: 3, useCase: "research" },
-    ],
-  },
-  {
-    name: "Enterprise Ops",
-    description: "High-compliance business stack",
-    icon: "🏢",
-    teamSize: 50,
-    subscriptions: [
-      { tool: "chatgpt", plan: "enterprise", monthlySpend: 60 * 30, seats: 30, useCase: "mixed" },
-      { tool: "claude", plan: "team", monthlySpend: 30 * 20, seats: 20, useCase: "mixed" },
-      { tool: "gemini", plan: "business", monthlySpend: 20 * 15, seats: 15, useCase: "research" },
-    ],
-  },
-];
-
 function newRow(): ToolSubscription {
   return {
     id: Math.random().toString(36).slice(2, 10),
@@ -188,14 +151,6 @@ function AuditPage() {
             next.monthlySpend = plan.pricePerSeat * (next.seats || 1);
           }
         }
-        // Auto-recalculate spend when seats change
-        if (patch.seats !== undefined && patch.seats !== s.seats) {
-          const info = TOOL_MAP[next.tool as ToolId];
-          const plan = info?.plans.find((p) => p.id === next.plan);
-          if (plan && plan.pricePerSeat > 0) {
-            next.monthlySpend = plan.pricePerSeat * patch.seats;
-          }
-        }
         return next;
       }),
     );
@@ -228,6 +183,8 @@ function AuditPage() {
     setSubmitting(true);
     try {
       const id = await saveAudit({ data: parsed.data });
+      // Deliberate satisfying delay to let the premium loading steps animate completely
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       navigate({ to: "/audit/$id", params: { id } });
     } catch (err) {
       if (isMountedRef.current) {
@@ -255,47 +212,6 @@ function AuditPage() {
               Add every AI tool your team subscribes to. Numbers stay in your browser until you
               choose to save.
             </p>
-          </div>
-
-          {/* SaaS Quick-Pack Prefill Templates */}
-          <div className="mb-8 rounded-2xl border border-indigo-100/80 bg-indigo-50/20 p-4 sm:p-6 backdrop-blur">
-            <h3 className="text-sm font-semibold text-indigo-950 flex items-center gap-1.5">
-              💡 Quick Start: Prefill with a standard stack
-            </h3>
-            <p className="mt-1 text-xs text-indigo-900/60">
-              Select a preset template to populate the form instantly, then customize it to your
-              actual stack.
-            </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {QUICK_PACKS.map((pack) => (
-                <button
-                  key={pack.name}
-                  type="button"
-                  onClick={() => {
-                    setTeamSize(pack.teamSize);
-                    setSubs(
-                      pack.subscriptions.map((s) => ({
-                        ...s,
-                        id: Math.random().toString(36).slice(2, 10),
-                      })) as ToolSubscription[],
-                    );
-                    setPrefilled(true);
-                  }}
-                  className="flex flex-col text-left p-3.5 rounded-xl border border-indigo-100/50 bg-white hover:border-indigo-300 hover:shadow-soft transition-all duration-200 cursor-pointer group"
-                >
-                  <span className="text-xl mb-1 group-hover:scale-110 transition-transform duration-200">
-                    {pack.icon}
-                  </span>
-                  <span className="text-xs font-bold text-slate-800">{pack.name}</span>
-                  <span className="text-[10px] text-slate-500 mt-0.5 leading-tight">
-                    {pack.description}
-                  </span>
-                  <span className="text-[9px] text-indigo-600 font-semibold mt-2.5 uppercase tracking-wide">
-                    {pack.subscriptions.length} Tools · Team of {pack.teamSize}
-                  </span>
-                </button>
-              ))}
-            </div>
           </div>
 
           <form
@@ -398,21 +314,48 @@ function AuditLoadingOverlay() {
   ];
 
   useEffect(() => {
-    const intervals = [800, 1600, 2400, 3200, 4000];
-    const timers = intervals.map((ms, idx) => setTimeout(() => setStep(idx + 1), ms));
+    // 550ms intervals perfectly matches the 3000ms delay for all 5 steps to complete
+    const timers = Array.from({ length: 5 }).map((_, idx) =>
+      setTimeout(() => setStep(idx + 1), 550 * (idx + 1)),
+    );
     return () => timers.forEach(clearTimeout);
   }, []);
 
+  const progressPercent = Math.min(100, Math.round((step / steps.length) * 100));
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="mx-4 max-w-md w-full rounded-2xl border border-white/20 bg-white/95 p-8 shadow-elevated text-slate-900 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-lg animate-in fade-in duration-300">
+      {/* Decorative backdrop glows */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
+
+      <div className="mx-4 max-w-md w-full rounded-2xl border border-slate-800/80 bg-slate-900/90 p-8 shadow-2xl shadow-indigo-500/5 text-slate-100 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Sleek top progress indicator */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-slate-800">
+          <div
+            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 transition-all duration-500 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+
         <div className="flex flex-col items-center text-center">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <h3 className="text-xl font-semibold tracking-tight">Auditing Your Stack</h3>
-          <p className="text-sm text-slate-500 mt-1">
+          {/* Glowing Spinner */}
+          <div className="relative mb-6 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-md animate-pulse" />
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 border border-slate-700">
+              <Loader2 className="h-7 w-7 animate-spin text-indigo-400" />
+            </div>
+          </div>
+
+          <h3 className="text-xl font-bold tracking-tight text-white bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+            Auditing Your Stack
+          </h3>
+          <p className="text-xs text-slate-400 mt-2 font-medium">
             Analyzing subscription data against 2025/2026 vendor pricing...
           </p>
         </div>
+
+        {/* Animated step checklist */}
         <div className="mt-8 space-y-4">
           {steps.map((text, idx) => {
             const isCompleted = step > idx;
@@ -420,27 +363,46 @@ function AuditLoadingOverlay() {
             return (
               <div
                 key={idx}
-                className={`flex items-center gap-3 transition-all duration-300 ${
+                className={`flex items-center gap-3.5 transition-all duration-500 ${
                   isCompleted
-                    ? "opacity-100"
+                    ? "opacity-100 transform translate-x-0"
                     : isActive
-                      ? "opacity-100 animate-pulse"
-                      : "opacity-35"
+                      ? "opacity-100 transform translate-x-1"
+                      : "opacity-25"
                 }`}
               >
+                {/* Circle step counter / SVG checkmark */}
                 <div
-                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold transition-all duration-300 ${
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all duration-500 ${
                     isCompleted
-                      ? "bg-emerald-500 text-white shadow-soft"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/10 scale-105"
                       : isActive
-                        ? "bg-primary text-white ring-4 ring-primary/20"
-                        : "border border-slate-300 text-slate-400 bg-slate-50"
+                        ? "bg-indigo-600 text-white ring-4 ring-indigo-500/20 scale-105"
+                        : "border border-slate-700 text-slate-500 bg-slate-800/50"
                   }`}
                 >
-                  {isCompleted ? "✓" : idx + 1}
+                  {isCompleted ? (
+                    <svg
+                      className="h-3.5 w-3.5 stroke-[3] stroke-white animate-in zoom-in duration-300"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    idx + 1
+                  )}
                 </div>
+
+                {/* Step text */}
                 <span
-                  className={`text-sm ${isActive ? "font-semibold text-primary" : isCompleted ? "text-slate-800" : "text-slate-500"}`}
+                  className={`text-sm transition-colors duration-300 ${
+                    isActive
+                      ? "font-semibold text-indigo-300"
+                      : isCompleted
+                        ? "text-slate-300 font-medium"
+                        : "text-slate-500"
+                  }`}
                 >
                   {text}
                 </span>
@@ -468,7 +430,7 @@ function SubscriptionRow({
 }) {
   const info = TOOL_MAP[sub.tool as ToolId];
   return (
-    <div className="rounded-xl border border-border/60 bg-background/60 p-4 sm:p-5 transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-300">
+    <div className="rounded-xl border border-border/60 bg-background/60 p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Tool #{index + 1}
