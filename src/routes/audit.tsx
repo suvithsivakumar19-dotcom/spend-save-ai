@@ -184,10 +184,15 @@ function AuditPage() {
     try {
       // Execute the database save and the checklist progress timer in parallel
       const savePromise = saveAudit({ data: parsed.data });
-      const delayPromise = new Promise((resolve) => setTimeout(resolve, 1720)); // aligns perfectly with the 1700ms step-5 check
+      const delayPromise = new Promise((resolve) => setTimeout(resolve, 870)); // aligns perfectly with the 850ms step-5 check
 
       // Wait for both to complete
       const [id] = await Promise.all([savePromise, delayPromise]);
+
+      // Set the automatic PDF download trigger flag for the results page
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("credex.pending_download", id);
+      }
 
       navigate({ to: "/audit/$id", params: { id } });
     } catch (err) {
@@ -319,7 +324,8 @@ function AuditLoadingOverlay() {
 
   useEffect(() => {
     // Custom dynamic delays for organic, non-linear timing (slow at first, accelerating at the end)
-    const cumulativeDelays = [600, 1100, 1350, 1550, 1700];
+    // Finishes all 5 steps in exactly 850ms instead of 1700ms for a blazing fast experience!
+    const cumulativeDelays = [300, 550, 680, 780, 850];
     const timers = cumulativeDelays.map((ms, idx) => setTimeout(() => setStep(idx + 1), ms));
     return () => timers.forEach(clearTimeout);
   }, []);

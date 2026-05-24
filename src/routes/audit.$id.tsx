@@ -258,7 +258,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
     navigate({ to: "/audit" });
   }
 
-  async function handleDownloadPDF() {
+  const handleDownloadPDF = useCallback(async () => {
     if (typeof window === "undefined") return;
     setPdfGenerating(true);
 
@@ -434,7 +434,23 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       document.documentElement.style.scrollBehavior = originalScrollBehavior;
       setPdfGenerating(false);
     }
-  }
+  }, [result.id]);
+
+  // Automatically trigger PDF download once on mount when landed from a fresh submission
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const pendingId = sessionStorage.getItem("credex.pending_download");
+    if (pendingId === result.id) {
+      // Consume token immediately to prevent infinite download loops on refresh
+      sessionStorage.removeItem("credex.pending_download");
+      
+      // Snappy 900ms delay to let Recharts/SVG layout animations settle perfectly
+      const timer = setTimeout(() => {
+        handleDownloadPDF();
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [result.id, handleDownloadPDF]);
 
   return (
     <section className="relative overflow-hidden bg-hero">
