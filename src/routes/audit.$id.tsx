@@ -270,10 +270,14 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
     // Save scroll position and scroll to top for clean rendering
     const initialScrollY = window.scrollY;
+
+    // Temporarily force scroll-behavior to auto to prevent smooth scroll animation lag on mobile
+    const originalScrollBehavior = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
 
     // Give a tiny moment for layout to settle on top scroll if rendering engine needs it
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Save original styles to restore them after capture
     const originalWidth = element.style.width;
@@ -347,12 +351,16 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       const width = 1200;
       const height = element.scrollHeight;
 
+      // Use a lower pixel ratio on mobile to drastically reduce GPU memory usage and speed up capture
+      const isMobile = window.innerWidth < 768;
+      const pixelRatio = isMobile ? 1.0 : 1.2;
+
       // 2. Generate Canvas using html-to-image (blazing fast compared to toPng!)
       const canvas = await toCanvas(element, {
         width,
         height,
-        quality: 0.95,
-        pixelRatio: 1.5, // 1.5x resolution is perfect for crisp print quality and super fast processing
+        quality: isMobile ? 0.9 : 0.95,
+        pixelRatio, // 1.0x on mobile for ultra-fast, 1.2x on desktop for high crispness
         skipFonts: true, // Speeds up generation immensely by skipping slow external font crawling
         fontEmbedCSS: "", // Bypasses font stylesheet parsing completely for maximum speed!
         backgroundColor: "#f8fafc", // Keep the background color slate-50
@@ -427,6 +435,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       // Fallback to window.print() if client-side rendering fails
       window.print();
     } finally {
+      document.documentElement.style.scrollBehavior = originalScrollBehavior;
       setPdfGenerating(false);
     }
   }
