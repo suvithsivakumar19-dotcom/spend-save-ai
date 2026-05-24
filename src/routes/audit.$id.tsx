@@ -421,8 +421,8 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
       heightLeft -= pageHeight;
 
-      // Use a small threshold (2mm) to prevent accidental blank page generation due to rounding
-      while (heightLeft > 2) {
+      // Use a safe threshold of 15mm (about 1.5cm of white space) to prevent accidental blank trailing page generation due to bottom margins/paddings
+      while (heightLeft > 15) {
         position = heightLeft - imgHeight; // Slide up the image
         pdf.addPage();
         pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, undefined, "FAST");
