@@ -267,7 +267,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
 
     try {
       // 1. Dynamically import libraries to keep SSR building safe
-      const { default: html2canvas } = await import("html2canvas");
+      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
 
       const element = document.querySelector("main");
@@ -275,47 +275,57 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
         throw new Error("Could not find main container element");
       }
 
-      // Save scroll position and scroll to top for clean canvas rendering
+      // Save scroll position and scroll to top for clean rendering
       const initialScrollY = window.scrollY;
       window.scrollTo(0, 0);
 
       // Give a tiny moment for layout to settle on top scroll if rendering engine needs it
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // 2. Capture canvas with high resolution
-      const canvas = await html2canvas(element, {
-        scale: 2, // Sharpness/high DPI
-        useCORS: true, // Handle external assets
-        logging: false,
-        backgroundColor: "#f8fafc", // Retain background color
-        ignoreElements: (el) => {
-          // Hide interactive controls, forms, or any items with the .no-print or other classes
-          return (
-            el.classList.contains("no-print") ||
-            el.classList.contains("lead-capture-section") ||
-            el.classList.contains("copy-btn") ||
-            el.classList.contains("re-run-btn") ||
-            el.tagName === "HEADER" ||
-            el.tagName === "FOOTER"
-          );
+      // 2. Generate PNG image using html-to-image (handles modern OKLCH CSS & SVGs seamlessly)
+      const imgData = await toPng(element, {
+        quality: 0.95,
+        backgroundColor: "#f8fafc", // Keep the background color slate-50
+        style: {
+          transform: "none",
+          transition: "none",
+        },
+        filter: (node) => {
+          // Exclude interactive controls, forms, or any items with specific classes/tags
+          if (node instanceof HTMLElement) {
+            return !(
+              node.classList.contains("no-print") ||
+              node.classList.contains("lead-capture-section") ||
+              node.classList.contains("copy-btn") ||
+              node.classList.contains("re-run-btn") ||
+              node.tagName === "HEADER" ||
+              node.tagName === "FOOTER"
+            );
+          }
+          return true;
         },
       });
 
       // Restore scroll position
       window.scrollTo(0, initialScrollY);
 
-      // 3. Convert canvas to image
-      const imgData = canvas.toDataURL("image/png");
-
-      // 4. Calculate dimensions for standard A4
+      // 3. Create PDF dimensions for standard A4
       const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210; // A4 size width in mm
       const pageHeight = 297; // A4 size height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      // Wait for image dimensions to calculate proper aspect ratio
+      const img = new Image();
+      img.src = imgData;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      const imgHeight = (img.height * imgWidth) / img.width;
       let heightLeft = imgHeight;
       let position = 0;
 
-      // 5. Add pages if long document
+      // 4. Add pages if long document
       pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
       heightLeft -= pageHeight;
 
@@ -326,7 +336,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
         heightLeft -= pageHeight;
       }
 
-      // 6. Save the PDF
+      // 5. Save the PDF file directly
       pdf.save(`credex-ai-spend-audit-${result.id || "report"}.pdf`);
     } catch (err) {
       console.error("PDF generation failed:", err);
