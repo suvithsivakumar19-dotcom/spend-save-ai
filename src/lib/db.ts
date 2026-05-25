@@ -16,8 +16,8 @@ function getServerSupabase() {
     import.meta.env.VITE_SUPABASE_ANON_KEY ||
     import.meta.env.SUPABASE_ANON_KEY;
 
-  // Real Supabase anon keys are always JWTs (starting with eyJ). 
-  // If the key is missing, or is a placeholder/mock key starting with "sb_", throw immediately 
+  // Real Supabase anon keys are always JWTs (starting with eyJ).
+  // If the key is missing, or is a placeholder/mock key starting with "sb_", throw immediately
   // to avoid slow, hanging database requests that stall the user experience.
   if (
     !supabaseUrl ||

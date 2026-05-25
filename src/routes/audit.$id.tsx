@@ -369,7 +369,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
         });
       } catch (e1) {
         console.warn("html-to-image failed, falling back to html2canvas:", e1);
-        
+
         // Try Engine 2: html2canvas (highly compatible pure-JS layout parser)
         const html2canvasModule = await import("html2canvas");
         const html2canvas = html2canvasModule.default || html2canvasModule;
@@ -430,7 +430,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
       }
 
       // 6. Deliver the PDF based on browser capabilities
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !("MSStream" in window);
       const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
       if (isMobile || isIOS || isSafari) {
@@ -481,7 +481,7 @@ function ResultsHero({ result }: { result: ReturnType<typeof runAudit> }) {
     if (pendingId === result.id) {
       // Consume token immediately to prevent infinite download loops on refresh
       sessionStorage.removeItem("credex.pending_download");
-      
+
       // Snappy 900ms delay to let Recharts/SVG layout animations settle perfectly
       const timer = setTimeout(() => {
         handleDownloadPDF();
