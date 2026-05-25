@@ -16,15 +16,13 @@ function getServerSupabase() {
     import.meta.env.VITE_SUPABASE_ANON_KEY ||
     import.meta.env.SUPABASE_ANON_KEY;
 
-  // Real Supabase anon keys are always JWTs (starting with eyJ).
-  // If the key is missing, or is a placeholder/mock key starting with "sb_", throw immediately
-  // to avoid slow, hanging database requests that stall the user experience.
-  if (
-    !supabaseUrl ||
-    !supabaseKey ||
-    supabaseKey.startsWith("sb_") ||
-    !supabaseKey.startsWith("eyJ")
-  ) {
+  // Real Supabase anon keys can be modern publishable keys (starting with sb_publishable_) or older JWTs (starting with eyJ).
+  // If the key is missing or is an invalid mock placeholder, throw immediately.
+  const isValidKey =
+    supabaseKey &&
+    (supabaseKey.startsWith("eyJ") || supabaseKey.startsWith("sb_publishable_"));
+
+  if (!supabaseUrl || !supabaseKey || !isValidKey) {
     throw new Error("Supabase URL or Key is missing or is an invalid mock placeholder.");
   }
 
